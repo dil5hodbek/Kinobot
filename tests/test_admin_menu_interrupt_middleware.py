@@ -4,6 +4,14 @@ Bug: admin biror FSM oqimida (masalan "Tahrirlash" kodni kutayotganda) boshqa
 menyu tugmasini bossa, matn eski oqimga tushib ketardi va yangi oqim hech
 qachon boshlanmasdi. Middleware buni oldini olishi kerak: menyu tugmasi matni
 kelsa, admin FSM holatini routerlar ko'rishidan oldin tozalaydi.
+
+MUHIM: `StateFilter` joriy holatni `state.get_state()` orqali JONLI emas,
+balki `data["raw_state"]` degan OLDINDAN olingan snapshot orqali tekshiradi
+(`aiogram/filters/state.py`). Shuning uchun middleware faqat `state.clear()`
+chaqirishi YETARLI EMAS — `data["raw_state"]`ni ham qo'lda `None`ga
+o'rnatishi shart, aks holda filtrlar hamon eski holatni ko'radi (bu aynan
+production'da ushlangan haqiqiy regressiya edi — quyidagi testlar buni
+maxsus tekshiradi).
 """
 from __future__ import annotations
 
@@ -30,8 +38,8 @@ class _FakeState:
         self._state = None
 
 
-def _data(message, state) -> dict:  # noqa: ANN001
-    return {"event_from_user": message.from_user, "state": state}
+def _data(message, state, raw_state) -> dict:  # noqa: ANN001
+    return {"event_from_user": message.from_user, "state": state, "raw_state": raw_state}
 
 
 @pytest.mark.asyncio
@@ -43,10 +51,13 @@ async def test_menu_button_clears_active_admin_state() -> None:
     state = _FakeState("EditMovie:waiting_code")
     handler = AsyncMock(return_value="ok")
 
-    result = await middleware(handler, message, _data(message, state))
+    data = _data(message, state, "EditMovie:waiting_code")
+    result = await middleware(handler, message, data)
 
     assert result == "ok"
     assert state.clear_calls == 1
+    # Filtrlar aynan shu kalitdan o'qiydi — shu tozalanmasa, tuzatish ishlamaydi.
+    assert data["raw_state"] is None
     handler.assert_awaited_once()
 
 
@@ -59,9 +70,11 @@ async def test_non_button_text_does_not_clear_state() -> None:
     state = _FakeState("EditMovie:waiting_code")
     handler = AsyncMock(return_value="ok")
 
-    await middleware(handler, message, _data(message, state))
+    data = _data(message, state, "EditMovie:waiting_code")
+    await middleware(handler, message, data)
 
     assert state.clear_calls == 0
+    assert data["raw_state"] == "EditMovie:waiting_code"
 
 
 @pytest.mark.asyncio
@@ -72,9 +85,11 @@ async def test_non_admin_button_text_does_not_clear_state() -> None:
     state = _FakeState("SomeState:waiting")
     handler = AsyncMock(return_value="ok")
 
-    await middleware(handler, message, _data(message, state))
+    data = _data(message, state, "SomeState:waiting")
+    await middleware(handler, message, data)
 
     assert state.clear_calls == 0
+    assert data["raw_state"] == "SomeState:waiting"
 
 
 @pytest.mark.asyncio
@@ -86,7 +101,8 @@ async def test_already_no_state_is_a_no_op() -> None:
     state = _FakeState(None)
     handler = AsyncMock(return_value="ok")
 
-    await middleware(handler, message, _data(message, state))
+    data = _data(message, state, None)
+    await middleware(handler, message, data)
 
     assert state.clear_calls == 0
 
@@ -100,6 +116,8 @@ async def test_button_label_from_any_language_clears_state() -> None:
     state = _FakeState("AddMovie:waiting_code")
     handler = AsyncMock(return_value="ok")
 
-    await middleware(handler, message, _data(message, state))
+    data = _data(message, state, "AddMovie:waiting_code")
+    await middleware(handler, message, data)
 
     assert state.clear_calls == 1
+    assert data["raw_state"] is None

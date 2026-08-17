@@ -12,6 +12,22 @@ tegishli oqimning `StateFilter(None)` bilan himoyalangan kirish nuqtasi
 o'zgarishsiz, normal ishga tushadi (btn_exit uchun ilgari qo'llangan
 "holat filtrisiz chiqish" naqshi bilan bir xil g'oya, endi barcha menyu
 tugmalariga umumlashtirilgan).
+
+MUHIM (ikkita nozik joy, ikkalasi ham SHART):
+  1. Bu OUTER middleware sifatida ro'yxatga olinishi kerak
+     (`dp.message.outer_middleware`, oddiy `.middleware()` EMAS). aiogram
+     avval har bir handlerning filtrini tekshiradi va FAQAT filtr mos
+     kelgandan keyin ICHKI middleware'larni ishga tushiradi
+     (`TelegramEventObserver.trigger()` shunday ishlaydi) — shu payt qaysi
+     handler chaqirilishi haqidagi qaror ALLAQACHON qabul qilingan bo'ladi.
+  2. `state.clear()`dan keyin `data["raw_state"]`ni ham qo'lda `None`ga
+     o'rnatish SHART. `StateFilter` joriy holatni jonli storage'dan emas,
+     balki `FSMContextMiddleware` tomonidan BIR MARTA (bizning middleware
+     ishga tushishidan oldin) olib qo'yilgan `raw_state` kalitidan o'qiydi
+     (`aiogram/filters/state.py`). `state.clear()` faqat storage'ni
+     yangilaydi — `data`dagi eski `raw_state` qiymati o'zgarmay qoladi va
+     filtrlar hali ham ESKI holatni ko'radi, agar shu yerda qo'lda
+     yangilanmasa.
 """
 from __future__ import annotations
 
@@ -69,7 +85,10 @@ class AdminMenuInterruptMiddleware(BaseMiddleware):
                 tg_user is not None
                 and tg_user.id in settings.admin_ids
                 and state is not None
-                and await state.get_state() is not None
+                and data.get("raw_state") is not None
             ):
                 await state.clear()
+                # StateFilter shu kalitdan o'qiydi (jonli storage'dan emas) —
+                # yangilamasak, filtrlar hamon eski holatni "ko'radi".
+                data["raw_state"] = None
         return await handler(event, data)

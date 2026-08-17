@@ -51,9 +51,14 @@ def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
         observer.middleware(RateLimitMiddleware(redis))
         observer.middleware(SubscriptionMiddleware(redis))
 
-    # Admin menyu tugmasi bosilsa — eski FSM oqimi matnni "yutib olmasin"
-    # (faqat message'lar: reply-klaviatura tugmalari shu orqali keladi).
-    dp.message.middleware(AdminMenuInterruptMiddleware())
+    # Admin menyu tugmasi bosilsa — eski FSM oqimi matnni "yutib olmasin".
+    # OUTER middleware SHART (oddiy .middleware() emas): aiogram avval har
+    # bir handlerning filtrini tekshiradi va FAQAT filtr mos kelgandan
+    # keyin ICHKI middleware'larni ishga tushiradi (Router.trigger() shunday
+    # ishlaydi) — shu payt eski FSM holati allaqachon "yutib" ulgurgan
+    # bo'ladi. Outer middleware esa filtr tekshiruvidan OLDIN ishlaydi,
+    # shuning uchun holatni shu yerda tozalash real ta'sir qiladi.
+    dp.message.outer_middleware(AdminMenuInterruptMiddleware())
 
 
 async def main() -> None:
