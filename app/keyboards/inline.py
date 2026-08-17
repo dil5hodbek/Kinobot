@@ -63,14 +63,14 @@ def search_results_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMar
     return builder.as_markup()
 
 
-def trend_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
+def trend_keyboard(movies: list[Movie]) -> InlineKeyboardMarkup:
+    """Trend ro'yxati: kino nomlari alohida matn xabarida ko'rsatiladi
+    (qarang trend.py), tugmalarda esa faqat KOD — tez tanlash uchun
+    ixcham katakcha (masalan kod "7" bo'lsa, tugma ham "🎬 7")."""
     builder = InlineKeyboardBuilder()
-    for idx, movie in enumerate(movies, start=1):
-        title = movie_title(movie, lang)
-        label = f"{idx}. {title} — {movie.code}"
-        builder.row(
-            InlineKeyboardButton(text=label, callback_data=f"movie:{movie.id}")
-        )
+    for movie in movies:
+        builder.button(text=f"🎬 {movie.code}", callback_data=f"movie:{movie.id}")
+    builder.adjust(5)
     return builder.as_markup()
 
 

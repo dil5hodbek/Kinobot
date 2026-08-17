@@ -18,20 +18,29 @@ class _FakeMovie:
         self.title_en = None
 
 
-def test_trend_keyboard_shows_name_and_code() -> None:
+def test_trend_keyboard_button_shows_code_only() -> None:
+    """Tugmada faqat kod ko'rinadi (tez tanlash uchun) — nom alohida matn xabarida."""
     movies = [_FakeMovie(1, "777", "Sarbozlar")]
-    markup = trend_keyboard(movies, "uz")
+    markup = trend_keyboard(movies)
 
     text = markup.inline_keyboard[0][0].text
-    assert "Sarbozlar" in text
     assert "777" in text
+    assert "Sarbozlar" not in text
 
 
 def test_trend_keyboard_callback_data_targets_movie() -> None:
     movies = [_FakeMovie(1, "777", "Sarbozlar")]
-    markup = trend_keyboard(movies, "uz")
+    markup = trend_keyboard(movies)
 
     assert markup.inline_keyboard[0][0].callback_data == "movie:1"
+
+
+def test_trend_keyboard_wraps_into_rows_of_five() -> None:
+    movies = [_FakeMovie(i, str(i), f"Kino {i}") for i in range(1, 8)]
+    markup = trend_keyboard(movies)
+
+    assert len(markup.inline_keyboard[0]) == 5
+    assert len(markup.inline_keyboard[1]) == 2
 
 
 def test_trend_admin_list_keyboard_has_remove_buttons() -> None:

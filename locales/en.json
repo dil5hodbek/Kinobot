@@ -13,6 +13,7 @@
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Code: {code}\n👁 {views} views",
   "trend_title": "🔥 Trending movies:",
   "trend_empty": "🔥 No trending movies yet.",
+  "trend_list_line": "{idx}. {title} — Code: {code}",
   "movie_unavailable": "⚠️ Video is temporarily unavailable. Admin: {admin_phone}",
   "help": "ℹ️ Send a movie code or title.\n👨‍💻 Admin: {admin_phone}",
   "input_too_long": "⚠️ Query too long. Please make it shorter.",

@@ -13,6 +13,7 @@
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Kod: {code}\n👁 {views} marta ko'rilgan",
   "trend_title": "🔥 Trend kinolar:",
   "trend_empty": "🔥 Hozircha trend kinolar yo'q.",
+  "trend_list_line": "{idx}. {title} — Kod: {code}",
   "movie_unavailable": "⚠️ Video vaqtincha mavjud emas. Admin: {admin_phone}",
   "help": "ℹ️ Kino kodi yoki nomini yuboring.\n👨‍💻 Admin: {admin_phone}",
   "input_too_long": "⚠️ Juda uzun so'rov. Qisqaroq yozing.",
