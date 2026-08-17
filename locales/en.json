@@ -17,7 +17,7 @@
   "help": "ℹ️ Send a movie code or title.\n👨‍💻 Admin: {admin_phone}",
   "input_too_long": "⚠️ Query too long. Please make it shorter.",
   "rate_limit": "⏳ Slow down... please wait a moment.",
-  "channels_list_title": "📢 Our channels:",
+  "channels_list_title": "📢 Our channels:\n\n✅ — you're already a member\n➕ — tap to join",
   "channels_empty": "📢 The channel list is empty for now.",
   "btn_search": "🔍 Search",
   "btn_channels": "📢 Channels",
@@ -103,11 +103,11 @@
   "btn_broadcast_send": "✅ Send",
   "broadcast_started": "📣 Broadcast started...",
   "broadcast_done": "✅ Done.\n\nSent: {sent}\nBlocked: {blocked}\nFailed: {failed}",
-  "channel_add_ask": "📢 Enter the channel username (with or without @). The bot must be an admin there:",
+  "channel_add_ask": "➕ To add a new channel, send its @username (the bot must be an ADMIN there).\n\nIf you don't need this right now, you can just tap another button below.",
   "channel_add_not_admin": "⚠️ The bot is not an admin there or the channel wasn't found. Check and re-enter:",
   "channel_add_saved": "✅ Channel added: @{username}",
   "channel_add_exists": "⚠️ This channel is already in the list.",
-  "channel_list_admin_title": "📢 Required subscription channels:",
+  "channel_list_admin_title": "📢 Required subscription channels ({count}):\n\n🗑 Tap a channel to remove it.",
   "channel_list_admin_empty": "📢 The list is empty. Add a channel.",
   "btn_channel_remove": "🗑 Remove",
   "channel_removed": "✅ Channel removed.",
@@ -123,5 +123,7 @@
   "edit_saved": "✅ Saved.",
   "edit_deleted": "🗑 Movie deleted (deactivated).",
   "views_label": "👁",
-  "btn_watch_movie": "🎬 Watch the movie"
+  "btn_watch_movie": "🎬 Watch the movie",
+  "promo_btn_bot": "🎬 Even more great movies here!",
+  "promo_btn_channel": "🔥 Join our official channel"
 }

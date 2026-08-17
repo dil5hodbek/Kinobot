@@ -93,6 +93,27 @@ async def test_successful_delivery_uses_copy_message_not_forward() -> None:
 
 
 @pytest.mark.asyncio
+async def test_successful_delivery_attaches_promo_keyboard() -> None:
+    """Har bir yuborilgan kino ostida botga/kanalga reklama tugmalari bo'lishi kerak."""
+    service, _ = _service_with_fake_repo()
+    bot = make_bot()
+    bot.session.return_value = None
+    movie = _movie()
+
+    await service.deliver(bot, movie, user_db_id=99, chat_id=555, lang="uz")
+
+    method = bot.session.call_args.args[1]
+    assert isinstance(method, CopyMessage)
+    urls = [
+        btn.url
+        for row in method.reply_markup.inline_keyboard
+        for btn in row
+        if btn.url
+    ]
+    assert len(urls) == 2
+
+
+@pytest.mark.asyncio
 async def test_deleted_source_deactivates_movie_and_raises() -> None:
     """Manba xabar o'chirilgan (TelegramBadRequest) -> is_active=False + xato."""
     service, repo = _service_with_fake_repo()

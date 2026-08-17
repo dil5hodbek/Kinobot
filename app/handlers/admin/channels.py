@@ -35,7 +35,8 @@ async def start_add_channel(
                 )
             )
         await message.answer(
-            t("channel_list_admin_title", lang), reply_markup=builder.as_markup()
+            t("channel_list_admin_title", lang, count=len(channels)),
+            reply_markup=builder.as_markup(),
         )
 
     await state.set_state(AddChannel.waiting_username)

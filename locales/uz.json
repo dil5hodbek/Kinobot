@@ -17,7 +17,7 @@
   "help": "ℹ️ Kino kodi yoki nomini yuboring.\n👨‍💻 Admin: {admin_phone}",
   "input_too_long": "⚠️ Juda uzun so'rov. Qisqaroq yozing.",
   "rate_limit": "⏳ Sekinroq... Bir oz kuting.",
-  "channels_list_title": "📢 Bizning kanallar:",
+  "channels_list_title": "📢 Bizning kanallar:\n\n✅ — allaqachon a'zosiz\n➕ — qo'shilish uchun bosing",
   "channels_empty": "📢 Hozircha kanallar ro'yxati bo'sh.",
   "btn_search": "🔍 Qidiruv",
   "btn_channels": "📢 Kanallar",
@@ -103,11 +103,11 @@
   "btn_broadcast_send": "✅ Yuborish",
   "broadcast_started": "📣 Yuborish boshlandi...",
   "broadcast_done": "✅ Yakunlandi.\n\nYuborildi: {sent}\nBloklagan: {blocked}\nXato: {failed}",
-  "channel_add_ask": "📢 Kanal username'ini kiriting (@ bilan yoki busiz). Bot o'sha kanalda admin bo'lishi shart:",
+  "channel_add_ask": "➕ Yangi kanal qo'shish uchun @username yuboring (bot o'sha kanalda ADMIN bo'lishi shart).\n\nHozircha kerak bo'lmasa — pastdagi boshqa tugmani bosishingiz mumkin.",
   "channel_add_not_admin": "⚠️ Bot bu kanalda admin emas yoki kanal topilmadi. Tekshirib qayta kiriting:",
   "channel_add_saved": "✅ Kanal qo'shildi: @{username}",
   "channel_add_exists": "⚠️ Bu kanal allaqachon ro'yxatda.",
-  "channel_list_admin_title": "📢 Majburiy obuna kanallari:",
+  "channel_list_admin_title": "📢 Majburiy obuna kanallari ({count} ta):\n\n🗑 O'chirish uchun kanalni bosing.",
   "channel_list_admin_empty": "📢 Ro'yxat bo'sh. Kanal qo'shing.",
   "btn_channel_remove": "🗑 O'chirish",
   "channel_removed": "✅ Kanal o'chirildi.",
@@ -123,5 +123,7 @@
   "edit_saved": "✅ Saqlandi.",
   "edit_deleted": "🗑 Kino o'chirildi (faolsizlantirildi).",
   "views_label": "👁",
-  "btn_watch_movie": "🎬 Filmni ko'rish"
+  "btn_watch_movie": "🎬 Filmni ko'rish",
+  "promo_btn_bot": "🎬 Yana qiziqarli kinolar shu yerda!",
+  "promo_btn_channel": "🔥 Rasmiy kanalga obuna bo'ling"
 }

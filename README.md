@@ -11,6 +11,8 @@ bot yopiq kanaldan videoni `copy_message` orqali yuboradi.
 - 🔥 Trend kinolar (eng ko'p ko'rilgan)
 - 🛠 Bot ichidagi admin panel (kino qo'shish, tahrirlash, statistika, broadcast, kanallar)
 - ⏳ Redis asosidagi rate-limit va obuna keshi
+- 📢 Har bir yuborilgan kino ostida botga/kanalga reklama tugmalari (organik o'sish uchun)
+- 🧹 Foydalanuvchi o'z so'nggi 48 soatlik yozishmasini bitta tugma bilan tozalashi mumkin
 
 ## Texnologiyalar
 
@@ -79,6 +81,8 @@ Bot ishga tushgach `Bot ishga tushdi: @username` ko'rinadi. Telegram'da `/start`
 | `SEARCH_SIMILARITY_THRESHOLD` | Fuzzy qidiruv chegarasi (0–1, default `0.2`) |
 | `RATE_LIMIT_PER_MINUTE` | Foydalanuvchi uchun daqiqadagi limit |
 | `PROTECT_CONTENT` | `true` bo'lsa yuborilgan video ko'chirilishdan himoyalanadi |
+| `PROMO_BOT_USERNAME` | Har bir yuborilgan kino ostidagi reklama tugmasi bot username'i (`@` siz) |
+| `PROMO_CHANNEL_USERNAME` | Har bir yuborilgan kino ostidagi reklama tugmasi kanal username'i (`@` siz) |
 
 > ⚠️ `.env` hech qachon git'ga qo'shilmaydi (`.gitignore` da). Haqiqiy tokenlarni
 > faqat `.env` da saqlang — `.env.example` faqat namuna (placeholder) uchun.

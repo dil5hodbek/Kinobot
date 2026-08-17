@@ -21,14 +21,17 @@ async def show_channels(
     session: AsyncSession,
     redis: Redis,
 ) -> None:
-    service = SubscriptionService(session, redis)
-    channels = await service.list_channels()
+    if message.from_user is None:
+        return
 
-    if not channels:
+    service = SubscriptionService(session, redis)
+    channels_status = await service.channels_with_status(message.bot, message.from_user.id)
+
+    if not channels_status:
         await message.answer(t("channels_empty", lang))
         return
 
     await message.answer(
         t("channels_list_title", lang),
-        reply_markup=channels_list_keyboard(channels),
+        reply_markup=channels_list_keyboard(channels_status),
     )

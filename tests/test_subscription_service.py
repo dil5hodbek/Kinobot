@@ -145,3 +145,27 @@ async def test_is_fully_subscribed_true_when_all_channels_ok() -> None:
     service = SubscriptionService(_FakeSession(), _FakeRedis())
 
     assert await service.is_fully_subscribed(bot, user_id=1) is True
+
+
+@pytest.mark.asyncio
+async def test_channels_with_status_reports_membership_per_channel() -> None:
+    """"Kanallar" ro'yxatida ✅/➕ belgisi uchun — har bir kanal o'z holati bilan."""
+    bot = make_bot()
+    _mock_member_status(bot, ChatMemberStatus.MEMBER)
+    service = SubscriptionService(_FakeSession(), _FakeRedis())
+
+    result = await service.channels_with_status(bot, user_id=1)
+
+    assert {c.username for c, _ in result} == {"alpha", "beta", "gamma"}
+    assert all(subscribed is True for _, subscribed in result)
+
+
+@pytest.mark.asyncio
+async def test_channels_with_status_reflects_unsubscribed() -> None:
+    bot = make_bot()
+    _mock_member_status(bot, ChatMemberStatus.LEFT)
+    service = SubscriptionService(_FakeSession(), _FakeRedis())
+
+    result = await service.channels_with_status(bot, user_id=1)
+
+    assert all(subscribed is False for _, subscribed in result)

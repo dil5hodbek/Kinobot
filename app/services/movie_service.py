@@ -12,7 +12,7 @@ from aiogram.exceptions import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.keyboards.inline import movie_link_keyboard
+from app.keyboards.inline import movie_link_keyboard, promo_keyboard
 from app.models.movie import Movie
 from app.repositories.movie_repository import MovieRepository
 from app.utils.format import movie_title
@@ -116,6 +116,7 @@ class MovieService:
                 message_id=movie.message_id,
                 caption=self.caption_for(movie, lang),
                 protect_content=settings.protect_content,
+                reply_markup=promo_keyboard(lang),
             )
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             logger.warning(

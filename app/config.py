@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = Field(20, alias="RATE_LIMIT_PER_MINUTE")
     protect_content: bool = Field(True, alias="PROTECT_CONTENT")
 
+    # === REKLAMA (har bir kino yuborilganda tugma sifatida qo'shiladi) ===
+    promo_bot_username: str = Field("SpoylerBot", alias="PROMO_BOT_USERNAME")
+    promo_channel_username: str = Field("spoylerkino", alias="PROMO_CHANNEL_USERNAME")
+
     @cached_property
     def admin_ids(self) -> list[int]:
         return [

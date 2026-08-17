@@ -91,6 +91,17 @@ class SubscriptionService:
     async def list_channels(self) -> list[ChannelInfo]:
         return await self._all_channels()
 
+    async def channels_with_status(
+        self, bot: Bot, user_id: int
+    ) -> list[tuple[ChannelInfo, bool]]:
+        """Har bir kanal + shu foydalanuvchi unga obuna bo'lganmi (✅/➕ belgisi
+        uchun, "Kanallar" ro'yxatida)."""
+        channels = await self._all_channels()
+        return [
+            (channel, await self._is_subscribed(bot, channel.username, user_id))
+            for channel in channels
+        ]
+
     async def _safe_cache_get(self, key: str) -> str | None:
         try:
             return await self._redis.get(key)

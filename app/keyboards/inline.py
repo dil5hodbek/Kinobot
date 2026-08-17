@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.config import settings
 from app.models.movie import Movie
 from app.utils.format import movie_title
 from app.utils.i18n import t
@@ -39,10 +40,14 @@ def subscription_keyboard(
     return builder.as_markup()
 
 
-def channels_list_keyboard(channels: list["ChannelInfo"]) -> InlineKeyboardMarkup:
+def channels_list_keyboard(
+    channels_status: list[tuple["ChannelInfo", bool]],
+) -> InlineKeyboardMarkup:
+    """Har bir kanal oldida obuna holati belgisi: ✅ (a'zo) yoki ➕ (qo'shilish)."""
     builder = InlineKeyboardBuilder()
-    for ch in channels:
-        builder.row(InlineKeyboardButton(text=f"{ch.display} ➕", url=ch.url))
+    for ch, subscribed in channels_status:
+        mark = "✅" if subscribed else "➕"
+        builder.row(InlineKeyboardButton(text=f"{mark} {ch.display}", url=ch.url))
     return builder.as_markup()
 
 
@@ -83,9 +88,29 @@ def genre_movies_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarku
 
 
 def movie_link_keyboard(url: str, lang: str) -> InlineKeyboardMarkup:
-    """Link-manba kino uchun — video o'rniga havola tugmasi."""
+    """Link-manba kino uchun — video o'rniga havola tugmasi + reklama tugmalari."""
     builder = InlineKeyboardBuilder()
-    builder.button(text=t("btn_watch_movie", lang), url=url)
+    builder.row(InlineKeyboardButton(text=t("btn_watch_movie", lang), url=url))
+    builder.attach(InlineKeyboardBuilder.from_markup(promo_keyboard(lang)))
+    return builder.as_markup()
+
+
+def promo_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """Har bir yuborilgan kino ostiga qo'shiladi: botga va kanalga havola
+    (kino xabari forward qilinsa ham, oluvchi botni/kanalni osongina topsin)."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=t("promo_btn_bot", lang),
+            url=f"https://t.me/{settings.promo_bot_username}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=t("promo_btn_channel", lang),
+            url=f"https://t.me/{settings.promo_channel_username}",
+        )
+    )
     return builder.as_markup()
 
 
