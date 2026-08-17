@@ -147,6 +147,19 @@ class MovieRepository:
         )
         return int(result.scalar_one())
 
+    # Doim shu bir xil (o'zboshimcha, lekin ilovada boshqa hech narsa
+    # ishlatmaydigan) kalit bilan chaqiriladi.
+    _TRENDING_LOCK_KEY = 872_634_102
+
+    async def lock_trending(self) -> None:
+        """PostgreSQL advisory-lock: shu tranzaksiya tugagunicha (commit/rollback)
+        boshqa concurrent `add_to_trending` chaqiruvini bloklaydi — "hisobla,
+        keyin yoz" race condition'ining oldini oladi (bir vaqtda 2 ta kino
+        qo'shilib, trend chegarasi (10 ta) buzilib ketmasligi uchun)."""
+        await self._session.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"), {"key": self._TRENDING_LOCK_KEY}
+        )
+
     async def set_trending(self, movie_id: int, trending: bool) -> None:
         await self._session.execute(
             update(Movie)

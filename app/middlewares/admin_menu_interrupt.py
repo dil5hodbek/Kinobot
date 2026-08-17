@@ -59,6 +59,7 @@ _MENU_BUTTON_KEYS = (
     "btn_broadcast",
     "btn_add_channel",
     "btn_trend_movies",
+    "btn_clear_chat",
 )
 
 

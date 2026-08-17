@@ -1,7 +1,10 @@
 """Kino biznes logikasi: qidiruv, yuborish, trend, statistika."""
 from __future__ import annotations
 
+import asyncio
 import logging
+import re
+from dataclasses import dataclass, field
 from enum import Enum, auto
 
 from aiogram import Bot
@@ -9,6 +12,7 @@ from aiogram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest,
     TelegramForbiddenError,
+    TelegramRetryAfter,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +25,10 @@ from app.utils.i18n import t
 
 logger = logging.getLogger(__name__)
 
+# Admin oqimlari (o'chirish/trendga qo'shish) uchun umumiy "sof raqam" qoidasi:
+# topilmasa fuzzy nom qidiruviga o'tmaymiz (aniq kod urinishi edi).
+_ADMIN_CODE_RE = re.compile(r"^\d{1,10}$")
+
 
 class AddTrendResult(Enum):
     """Kinoni trendga qo'shish urinishi natijasi."""
@@ -29,6 +37,14 @@ class AddTrendResult(Enum):
     ALREADY_TRENDING = auto()
     LIMIT_REACHED = auto()
     NOT_FOUND = auto()
+
+
+@dataclass(slots=True)
+class AdminMovieLookup:
+    """resolve_admin_query() natijasi: aniq bitta kino YOKI fuzzy natijalar ro'yxati."""
+
+    movie: Movie | None = None
+    candidates: list[Movie] = field(default_factory=list)
 
 
 class MovieDeliveryError(Exception):
@@ -54,6 +70,26 @@ class MovieService:
             limit=10,
         )
 
+    async def resolve_admin_query(self, query: str) -> AdminMovieLookup:
+        """Admin oqimlari (o'chirish, trendga qo'shish) uchun umumiy qidiruv:
+        avval aniq kod (faol yoki nofaol), topilmasa va sof raqam bo'lsa fuzzy
+        qidiruvga o'tmaydi, aks holda nom bo'yicha fuzzy qidiruv (0/1/ko'p
+        natija). Bir joyda — ikkita admin oqimida mustaqil takrorlanmasin va
+        ikkalasi ham bir xil "raqam bo'lsa fuzzy'ga tushmaslik" qoidasiga
+        bo'ysunsin.
+        """
+        q = query.strip()
+        movie = await self._repo.get_by_code_any(q)
+        if movie is not None:
+            return AdminMovieLookup(movie=movie)
+        if _ADMIN_CODE_RE.match(q):
+            return AdminMovieLookup()
+
+        candidates = await self.search(q)
+        if len(candidates) == 1:
+            return AdminMovieLookup(movie=candidates[0])
+        return AdminMovieLookup(candidates=candidates)
+
     async def get_by_id(self, movie_id: int) -> Movie | None:
         movie = await self._repo.get_by_id(movie_id)
         if movie is None or not movie.is_active:
@@ -76,6 +112,11 @@ class MovieService:
         `settings.trend_limit` — foydalanuvchiga ko'rinadigan MAKSIMAL son
         (spec: userga maksimal 10 ta) — shu chegaradan oshirilmaydi.
         """
+        # Tranzaksiya davomida qulflanadi — ikkita concurrent qo'shish
+        # bir-birining "hisoblagan" sonini ko'rmay, chegaradan (10 ta)
+        # oshirib yubormasligi uchun (avval bu yerda race condition bor edi).
+        await self._repo.lock_trending()
+
         movie = await self._repo.get_by_id(movie_id)
         if movie is None:
             return AddTrendResult.NOT_FOUND
@@ -150,6 +191,23 @@ class MovieService:
                 protect_content=settings.protect_content,
                 reply_markup=promo_keyboard(lang),
             )
+        except TelegramRetryAfter as exc:
+            # Telegram flood-control — kanal/xabar bilan bog'liq muammo EMAS,
+            # shuning uchun kino faolsizlantirilmaydi, faqat bir marta kutib
+            # qayta urinamiz (aks holda foydalanuvchi HECH QANDAY javob olmay
+            # qolardi — bu xato avval umuman ushlanmagan edi).
+            await asyncio.sleep(exc.retry_after)
+            try:
+                await bot.copy_message(
+                    chat_id=chat_id,
+                    from_chat_id=movie.channel_id,
+                    message_id=movie.message_id,
+                    caption=self.caption_for(movie, lang),
+                    protect_content=settings.protect_content,
+                    reply_markup=promo_keyboard(lang),
+                )
+            except TelegramAPIError as retry_exc:
+                raise MovieDeliveryError(str(retry_exc)) from retry_exc
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             logger.warning(
                 "Kino yuborib bo'lmadi (movie_id=%s): %s", movie.id, exc
@@ -174,6 +232,16 @@ class MovieService:
                 text=self.caption_for(movie, lang),
                 reply_markup=movie_link_keyboard(movie.external_url, lang),
             )
+        except TelegramRetryAfter as exc:
+            await asyncio.sleep(exc.retry_after)
+            try:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=self.caption_for(movie, lang),
+                    reply_markup=movie_link_keyboard(movie.external_url, lang),
+                )
+            except TelegramAPIError as retry_exc:
+                raise MovieDeliveryError(str(retry_exc)) from retry_exc
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             logger.warning(
                 "Link kino yuborib bo'lmadi (movie_id=%s): %s", movie.id, exc

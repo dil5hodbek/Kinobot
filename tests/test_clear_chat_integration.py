@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.methods import DeleteMessage, SendMessage
+from aiogram.methods import DeleteMessage, DeleteMessages, SendMessage
 from aiogram.types import Update
 
 from app.handlers.clear_chat import router as clear_chat_router
@@ -77,9 +77,9 @@ async def test_confirm_callback_deletes_tracked_messages_end_to_end() -> None:
     await dp.feed_update(bot, update)
 
     delete_calls = [
-        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessage)
+        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessages)
     ]
-    deleted_ids = {c.args[1].message_id for c in delete_calls}
+    deleted_ids = {mid for c in delete_calls for mid in c.args[1].message_ids}
     assert {100, 101}.issubset(deleted_ids)
 
     send_calls = [

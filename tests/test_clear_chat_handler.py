@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import pytest
-from aiogram.methods import DeleteMessage, SendMessage
+from aiogram.methods import DeleteMessage, DeleteMessages, SendMessage
 
 from app.handlers.clear_chat import ask_clear_chat, cancel_clear_chat, do_clear_chat
 from app.services.chat_cleanup_service import log_message
@@ -39,10 +39,10 @@ async def test_do_clear_chat_deletes_tracked_messages_and_reports_count() -> Non
     await do_clear_chat(callback, lang="uz", redis=redis)
 
     delete_calls = [
-        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessage)
+        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessages)
     ]
-    assert len(delete_calls) == 3
-    assert {c.args[1].message_id for c in delete_calls} == {10, 11, 12}
+    assert len(delete_calls) == 1
+    assert set(delete_calls[0].args[1].message_ids) == {10, 11, 12}
 
     send_calls = [
         c for c in bot.session.call_args_list if isinstance(c.args[1], SendMessage)
@@ -62,7 +62,7 @@ async def test_do_clear_chat_with_nothing_tracked_reports_none() -> None:
     await do_clear_chat(callback, lang="uz", redis=redis)
 
     delete_calls = [
-        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessage)
+        c for c in bot.session.call_args_list if isinstance(c.args[1], DeleteMessages)
     ]
     send_calls = [
         c for c in bot.session.call_args_list if isinstance(c.args[1], SendMessage)

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
-from aiogram.methods import DeleteMessage
+from aiogram.methods import DeleteMessages
 
 from app.services.chat_cleanup_service import (
     WINDOW_SECONDS,
@@ -82,29 +82,55 @@ async def test_pop_fails_open_and_returns_empty_list() -> None:
 
 @pytest.mark.asyncio
 async def test_delete_messages_counts_successes() -> None:
+    """1-100 ta id bitta `deleteMessages` chaqiruviga sig'adi — bitta so'rov."""
     bot = make_bot()
-    bot.session.return_value = None
+    bot.session.return_value = True
 
     deleted = await delete_messages(bot, chat_id=1, message_ids=[10, 20, 30])
 
     assert deleted == 3
-    assert bot.session.await_count == 3
+    assert bot.session.await_count == 1
+    method = bot.session.call_args.args[1]
+    assert isinstance(method, DeleteMessages)
+    assert method.message_ids == [10, 20, 30]
 
 
 @pytest.mark.asyncio
-async def test_delete_messages_skips_already_gone_messages() -> None:
+async def test_delete_messages_chunks_by_100() -> None:
+    """150 ta id -> 2 ta chunk (100 + 50), 2 ta alohida `deleteMessages` chaqiruvi."""
     bot = make_bot()
+    bot.session.return_value = True
+    ids = list(range(1, 151))
+
+    deleted = await delete_messages(bot, chat_id=1, message_ids=ids)
+
+    assert deleted == 150
+    assert bot.session.await_count == 2
+    first_chunk = bot.session.call_args_list[0].args[1].message_ids
+    second_chunk = bot.session.call_args_list[1].args[1].message_ids
+    assert len(first_chunk) == 100
+    assert len(second_chunk) == 50
+
+
+@pytest.mark.asyncio
+async def test_delete_messages_chunk_level_failure_excludes_that_chunk() -> None:
+    """Butun chunk chaqiruvi xato bersa (masalan tarmoq xatosi) — faqat o'sha
+    chunk hisoblanmaydi, boshqa chunklar davom etadi."""
+    bot = make_bot()
+    calls = {"n": 0}
 
     async def _side_effect(_bot, method, **_kwargs):  # noqa: ANN001
-        if isinstance(method, DeleteMessage) and method.message_id == 20:
-            raise TelegramBadRequest(method=method, message="message to delete not found")
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise TelegramBadRequest(method=method, message="bad request")
         return True
 
     bot.session.side_effect = _side_effect
+    ids = list(range(1, 151))
 
-    deleted = await delete_messages(bot, chat_id=1, message_ids=[10, 20, 30])
+    deleted = await delete_messages(bot, chat_id=1, message_ids=ids)
 
-    assert deleted == 2
+    assert deleted == 50  # faqat 2-chunk (50 ta) muvaffaqiyatli
 
 
 @pytest.mark.asyncio

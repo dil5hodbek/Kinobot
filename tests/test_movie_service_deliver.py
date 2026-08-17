@@ -12,7 +12,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
 from aiogram.methods import CopyMessage
 
 from app.models.movie import Movie
@@ -151,6 +151,50 @@ async def test_bot_blocked_deactivates_movie_and_raises() -> None:
         await service.deliver(bot, movie, user_db_id=99, chat_id=555, lang="uz")
 
     assert repo.deactivated_ids == [movie.id]
+
+
+@pytest.mark.asyncio
+async def test_flood_control_retries_once_and_succeeds() -> None:
+    """TelegramRetryAfter (flood-control) — kino faolsizlantirilmaydi, bir
+    marta kutib qayta yuborilgach muvaffaqiyatli yetkaziladi."""
+    service, repo = _service_with_fake_repo()
+    bot = make_bot()
+    movie = _movie()
+    calls = {"n": 0}
+
+    async def _side_effect(_bot, method, **_kwargs):  # noqa: ANN001
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise TelegramRetryAfter(method=method, message="flood", retry_after=0)
+        return None
+
+    bot.session.side_effect = _side_effect
+
+    await service.deliver(bot, movie, user_db_id=99, chat_id=555, lang="uz")
+
+    assert calls["n"] == 2
+    assert repo.deactivated_ids == []  # flood-control kino bilan bog'liq emas
+    assert repo.incremented_ids == [movie.id]  # oxir-oqibat muvaffaqiyatli yetkazildi
+
+
+@pytest.mark.asyncio
+async def test_flood_control_still_failing_after_retry_raises_delivery_error() -> None:
+    """Qayta urinish ham xato bersa — foydalanuvchi jimgina qolib ketmaydi,
+    MovieDeliveryError ko'tariladi (movie_unavailable xabari uchun)."""
+    service, repo = _service_with_fake_repo()
+    bot = make_bot()
+    movie = _movie()
+
+    async def _side_effect(_bot, method, **_kwargs):  # noqa: ANN001
+        raise TelegramRetryAfter(method=method, message="flood", retry_after=0)
+
+    bot.session.side_effect = _side_effect
+
+    with pytest.raises(MovieDeliveryError):
+        await service.deliver(bot, movie, user_db_id=99, chat_id=555, lang="uz")
+
+    assert repo.deactivated_ids == []  # flood-control uchun kino faolsizlantirilmaydi
+    assert repo.incremented_ids == []
 
 
 @pytest.mark.asyncio

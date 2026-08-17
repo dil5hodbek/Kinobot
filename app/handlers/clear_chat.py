@@ -39,7 +39,10 @@ async def do_clear_chat(callback: CallbackQuery, lang: str, redis: Redis) -> Non
     deleted = await delete_messages(callback.bot, chat_id, message_ids)
 
     text = t("clear_chat_done", lang, count=deleted) if deleted else t("clear_chat_none", lang)
-    await callback.bot.send_message(chat_id, text, reply_markup=main_menu_keyboard(lang))
+    try:
+        await callback.bot.send_message(chat_id, text, reply_markup=main_menu_keyboard(lang))
+    except TelegramAPIError:
+        pass
 
 
 @router.callback_query(F.data == "clearchat_cancel")

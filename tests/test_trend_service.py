@@ -13,6 +13,7 @@ class _FakeTrendRepo:
     def __init__(self, movies: dict[int, Movie]) -> None:
         self._movies = movies
         self.set_trending_calls: list[tuple[int, bool]] = []
+        self.lock_calls = 0
 
     async def get_by_id(self, movie_id: int) -> Movie | None:
         return self._movies.get(movie_id)
@@ -23,6 +24,9 @@ class _FakeTrendRepo:
     async def set_trending(self, movie_id: int, trending: bool) -> None:
         self.set_trending_calls.append((movie_id, trending))
         self._movies[movie_id].is_trending = trending
+
+    async def lock_trending(self) -> None:
+        self.lock_calls += 1
 
 
 def _movie(movie_id: int, *, trending: bool = False) -> Movie:
@@ -55,6 +59,8 @@ async def test_add_to_trending_success() -> None:
 
     assert result is AddTrendResult.ADDED
     assert repo.set_trending_calls == [(1, True)]
+    # Race condition himoyasi: qo'shishdan oldin tranzaksiya qulflanishi kerak.
+    assert repo.lock_calls == 1
 
 
 @pytest.mark.asyncio

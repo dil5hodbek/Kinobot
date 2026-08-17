@@ -181,13 +181,14 @@ def delete_confirm_keyboard(movie_id: int, lang: str) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def trend_admin_list_keyboard(movies: list[Movie]) -> InlineKeyboardMarkup:
+def trend_admin_list_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
     """Admin trend boshqaruvi — joriy ro'yxat, har biri oldida o'chirish tugmasi."""
     builder = InlineKeyboardBuilder()
     for movie in movies:
+        title = movie_title(movie, lang)
         builder.row(
             InlineKeyboardButton(
-                text=f"🗑 {movie.title_uz} — {movie.code}",
+                text=f"🗑 {title} — {movie.code}",
                 callback_data=f"trendrm:{movie.id}",
             )
         )

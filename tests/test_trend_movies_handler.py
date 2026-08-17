@@ -13,7 +13,7 @@ from app.handlers.admin.trend_movies import (
     pick_trend_movie,
     remove_trend_movie,
 )
-from app.services.movie_service import AddTrendResult
+from app.services.movie_service import AddTrendResult, AdminMovieLookup
 from tests.helpers import make_bot, make_callback, make_message
 
 
@@ -69,7 +69,9 @@ async def test_add_by_exact_code() -> None:
     message = make_message(bot, 1, text="777")
 
     fake_service = AsyncMock()
-    fake_service.find_by_code_any.return_value = _FakeMovie(5, "777", "Kino")
+    fake_service.resolve_admin_query.return_value = AdminMovieLookup(
+        movie=_FakeMovie(5, "777", "Kino")
+    )
     fake_service.add_to_trending.return_value = AddTrendResult.ADDED
     fake_service.get_trending.return_value = []
 
@@ -78,6 +80,7 @@ async def test_add_by_exact_code() -> None:
     ):
         await got_trend_query(message, lang="uz", session=None)
 
+    fake_service.resolve_admin_query.assert_awaited_once_with("777")
     fake_service.add_to_trending.assert_awaited_once_with(5)
     texts = _all_texts(bot)
     assert any("qo'shildi" in t for t in texts)
@@ -90,8 +93,7 @@ async def test_add_query_not_found() -> None:
     message = make_message(bot, 1, text="obscure title")
 
     fake_service = AsyncMock()
-    fake_service.find_by_code_any.return_value = None
-    fake_service.search.return_value = []
+    fake_service.resolve_admin_query.return_value = AdminMovieLookup()
 
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
@@ -110,11 +112,12 @@ async def test_add_query_multiple_results_shows_picker() -> None:
     message = make_message(bot, 1, text="kino")
 
     fake_service = AsyncMock()
-    fake_service.find_by_code_any.return_value = None
-    fake_service.search.return_value = [
-        _FakeMovie(1, "1", "Kino A"),
-        _FakeMovie(2, "2", "Kino B"),
-    ]
+    fake_service.resolve_admin_query.return_value = AdminMovieLookup(
+        candidates=[
+            _FakeMovie(1, "1", "Kino A"),
+            _FakeMovie(2, "2", "Kino B"),
+        ]
+    )
 
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
@@ -134,7 +137,9 @@ async def test_add_already_trending_message() -> None:
     message = make_message(bot, 1, text="777")
 
     fake_service = AsyncMock()
-    fake_service.find_by_code_any.return_value = _FakeMovie(5, "777", "Kino")
+    fake_service.resolve_admin_query.return_value = AdminMovieLookup(
+        movie=_FakeMovie(5, "777", "Kino")
+    )
     fake_service.add_to_trending.return_value = AddTrendResult.ALREADY_TRENDING
     fake_service.get_trending.return_value = []
 
@@ -154,7 +159,9 @@ async def test_add_limit_reached_message() -> None:
     message = make_message(bot, 1, text="777")
 
     fake_service = AsyncMock()
-    fake_service.find_by_code_any.return_value = _FakeMovie(5, "777", "Kino")
+    fake_service.resolve_admin_query.return_value = AdminMovieLookup(
+        movie=_FakeMovie(5, "777", "Kino")
+    )
     fake_service.add_to_trending.return_value = AddTrendResult.LIMIT_REACHED
     fake_service.get_trending.return_value = []
 

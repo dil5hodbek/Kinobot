@@ -1,6 +1,7 @@
 """Majburiy obuna tekshiruvi (getChatMember + Redis kesh)."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -78,12 +79,18 @@ class SubscriptionService:
         return subscribed
 
     async def get_unsubscribed(self, bot: Bot, user_id: int) -> list[ChannelInfo]:
-        """Foydalanuvchi obuna bo'lmagan kanallar ro'yxati."""
-        result: list[ChannelInfo] = []
-        for channel in await self._all_channels():
-            if not await self._is_subscribed(bot, channel.username, user_id):
-                result.append(channel)
-        return result
+        """Foydalanuvchi obuna bo'lmagan kanallar ro'yxati.
+
+        Har bir kanal tekshiruvi PARALLEL ishlaydi (kesh sovub qolganda har
+        biri alohida Telegram API chaqiruvi bo'lishi mumkin — ketma-ket
+        bo'lsa, kanallar soniga chiziqli proporsional kutish vaqti bo'lardi,
+        bu esa har bir oddiy xabar uchun ishlaydigan obuna filtrida sezilarli).
+        """
+        channels = await self._all_channels()
+        subscribed_flags = await asyncio.gather(
+            *(self._is_subscribed(bot, ch.username, user_id) for ch in channels)
+        )
+        return [ch for ch, subscribed in zip(channels, subscribed_flags) if not subscribed]
 
     async def is_fully_subscribed(self, bot: Bot, user_id: int) -> bool:
         return len(await self.get_unsubscribed(bot, user_id)) == 0
@@ -97,10 +104,10 @@ class SubscriptionService:
         """Har bir kanal + shu foydalanuvchi unga obuna bo'lganmi (✅/➕ belgisi
         uchun, "Kanallar" ro'yxatida)."""
         channels = await self._all_channels()
-        return [
-            (channel, await self._is_subscribed(bot, channel.username, user_id))
-            for channel in channels
-        ]
+        subscribed_flags = await asyncio.gather(
+            *(self._is_subscribed(bot, ch.username, user_id) for ch in channels)
+        )
+        return list(zip(channels, subscribed_flags))
 
     async def _safe_cache_get(self, key: str) -> str | None:
         try:

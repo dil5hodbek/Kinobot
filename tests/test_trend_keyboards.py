@@ -45,10 +45,18 @@ def test_trend_keyboard_wraps_into_rows_of_five() -> None:
 
 def test_trend_admin_list_keyboard_has_remove_buttons() -> None:
     movies = [_FakeMovie(1, "10", "Kino A"), _FakeMovie(2, "20", "Kino B")]
-    markup = trend_admin_list_keyboard(movies)
+    markup = trend_admin_list_keyboard(movies, "uz")
 
     datas = [btn.callback_data for row in markup.inline_keyboard for btn in row]
     assert datas == ["trendrm:1", "trendrm:2"]
+
+
+def test_trend_admin_list_keyboard_uses_language_specific_title() -> None:
+    movie = _FakeMovie(1, "10", "Kino A")
+    movie.title_ru = "Кино А"
+    markup = trend_admin_list_keyboard([movie], "ru")
+
+    assert "Кино А" in markup.inline_keyboard[0][0].text
 
 
 def test_trend_pick_keyboard_targets_correct_movies() -> None:

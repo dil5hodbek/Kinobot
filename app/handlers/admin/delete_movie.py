@@ -1,8 +1,6 @@
 """Admin: '🗑 O'chirish' — kino kodini/nomini so'rab, topib, butunlay o'chirish."""
 from __future__ import annotations
 
-import re
-
 from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import StateFilter
@@ -21,8 +19,6 @@ from app.utils.i18n import t
 router = Router(name="admin_delete_movie")
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
-
-_CODE_RE = re.compile(r"^\d{1,10}$")
 
 
 def _confirm_text(movie: Movie, lang: str) -> str:
@@ -52,40 +48,24 @@ async def got_query(
         return
 
     service = MovieService(session)
+    lookup = await service.resolve_admin_query(query)
 
-    # 1) Kod bo'yicha aniq (faol yoki nofaol; kod raqam yoki matn bo'lishi
-    # mumkin — formatidan qat'i nazar avval aniq moslikni tekshiramiz).
-    movie = await service.find_by_code_any(query)
-    if movie is not None:
+    if lookup.movie is not None:
         await state.clear()
         await message.answer(
-            _confirm_text(movie, lang),
-            reply_markup=delete_confirm_keyboard(movie.id, lang),
+            _confirm_text(lookup.movie, lang),
+            reply_markup=delete_confirm_keyboard(lookup.movie.id, lang),
         )
         return
-    if _CODE_RE.match(query):
-        # Sof raqam aniq kod urinishi edi — topilmasa nom qidiruviga o'tmaymiz.
-        await message.answer(t("delete_not_found", lang))
-        return
-
-    # 2) Nom bo'yicha qidiruv
-    movies = await service.search(query)
-    if not movies:
+    if not lookup.candidates:
         await message.answer(t("delete_not_found", lang))
         return
 
     await state.clear()
-    if len(movies) == 1:
-        movie = movies[0]
-        await message.answer(
-            _confirm_text(movie, lang),
-            reply_markup=delete_confirm_keyboard(movie.id, lang),
-        )
-    else:
-        await message.answer(
-            t("delete_pick", lang),
-            reply_markup=delete_results_keyboard(movies, lang),
-        )
+    await message.answer(
+        t("delete_pick", lang),
+        reply_markup=delete_results_keyboard(lookup.candidates, lang),
+    )
 
 
 @router.callback_query(F.data.startswith("delpick:"))

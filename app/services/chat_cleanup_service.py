@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 WINDOW_SECONDS = 48 * 60 * 60
 _KEY_TTL_SECONDS = WINDOW_SECONDS + 60 * 60  # bo'sh chat kaliti o'zi tozalanib tursin
-_DELETE_DELAY = 1 / 20  # Telegram flood-limitidan xavfsizlik uchun
+_DELETE_CHUNK_SIZE = 100  # Bot API deleteMessages bir chaqiruvda 1-100 ta id qabul qiladi
+_CHUNK_DELAY = 0.05  # Telegram flood-limitidan xavfsizlik uchun (chunklar orasida)
 
 
 def _key(chat_id: int) -> str:
@@ -56,22 +57,25 @@ async def pop_recent_message_ids(redis: Redis, chat_id: int) -> list[int]:
 
 
 async def delete_messages(bot: Bot, chat_id: int, message_ids: list[int]) -> int:
-    """Berilgan xabarlarni birma-bir o'chiradi. Muvaffaqiyatli o'chirilganlar
-    sonini qaytaradi (48 soatdan eski/allaqachon yo'q xabarlar jimgina
-    o'tkazib yuboriladi — Telegram shunday xabarlarni rad etadi)."""
+    """Berilgan xabarlarni ommaviy (`deleteMessages`, 100 tadan bir chaqiruvda)
+    o'chiradi — bitta-bitta `deleteMessage` chaqirishdan ancha tezroq katta
+    tarix uchun. Qaytgan son — nechta xabar SO'RALGANI (Telegram allaqachon
+    yo'q/48 soatdan eski xabarlarni chaqiruv ichida jimgina o'tkazib
+    yuboradi, buni alohida bildirmaydi — shuning uchun aniq emas, taxminiy)."""
     deleted = 0
-    for message_id in message_ids:
+    for i in range(0, len(message_ids), _DELETE_CHUNK_SIZE):
+        chunk = message_ids[i : i + _DELETE_CHUNK_SIZE]
         try:
-            await bot.delete_message(chat_id, message_id)
-            deleted += 1
+            await bot.delete_messages(chat_id, chunk)
+            deleted += len(chunk)
         except TelegramRetryAfter as exc:
             await asyncio.sleep(exc.retry_after)
             try:
-                await bot.delete_message(chat_id, message_id)
-                deleted += 1
+                await bot.delete_messages(chat_id, chunk)
+                deleted += len(chunk)
             except TelegramAPIError:
                 pass
         except TelegramAPIError:
             pass
-        await asyncio.sleep(_DELETE_DELAY)
+        await asyncio.sleep(_CHUNK_DELAY)
     return deleted

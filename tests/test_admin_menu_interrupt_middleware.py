@@ -121,3 +121,22 @@ async def test_button_label_from_any_language_clears_state() -> None:
 
     assert state.clear_calls == 1
     assert data["raw_state"] is None
+
+
+@pytest.mark.asyncio
+async def test_clear_chat_button_also_interrupts_admin_flows() -> None:
+    """Reg-test: btn_clear_chat avval ro'yxatda yo'q edi — admin biror
+    oqimda bo'lganda "Suhbatni tozalash" bosilsa, matn eski oqimga tushib
+    ketardi va clear_chat.py hech qachon ishlamas edi."""
+    middleware = AdminMenuInterruptMiddleware()
+    bot = make_bot()
+    admin_id = settings.admin_ids[0]
+    message = make_message(bot, admin_id, text=t("btn_clear_chat", "uz"))
+    state = _FakeState("EditMovie:waiting_value")
+    handler = AsyncMock(return_value="ok")
+
+    data = _data(message, state, "EditMovie:waiting_value")
+    await middleware(handler, message, data)
+
+    assert state.clear_calls == 1
+    assert data["raw_state"] is None

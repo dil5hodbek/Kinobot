@@ -30,7 +30,7 @@ async def _show_list(message: Message, lang: str, service: MovieService) -> None
     if movies:
         await message.answer(
             t("trend_admin_title", lang, count=len(movies), limit=settings.trend_limit),
-            reply_markup=trend_admin_list_keyboard(movies),
+            reply_markup=trend_admin_list_keyboard(movies, lang),
         )
     else:
         await message.answer(t("trend_admin_empty", lang))
@@ -68,22 +68,16 @@ async def got_trend_query(message: Message, lang: str, session: AsyncSession) ->
         return
 
     service = MovieService(session)
+    lookup = await service.resolve_admin_query(query)
 
-    movie = await service.find_by_code_any(query)
-    if movie is not None:
-        await _add_and_report(message, lang, service, movie.id)
+    if lookup.movie is not None:
+        await _add_and_report(message, lang, service, lookup.movie.id)
         return
-
-    movies = await service.search(query)
-    if not movies:
+    if not lookup.candidates:
         await message.answer(t("trend_add_not_found", lang))
         return
-    if len(movies) == 1:
-        await _add_and_report(message, lang, service, movies[0].id)
-        return
-
     await message.answer(
-        t("trend_pick", lang), reply_markup=trend_pick_keyboard(movies, lang)
+        t("trend_pick", lang), reply_markup=trend_pick_keyboard(lookup.candidates, lang)
     )
 
 
