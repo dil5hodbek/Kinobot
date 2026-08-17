@@ -89,6 +89,15 @@ def movie_link_keyboard(url: str, lang: str) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def clear_chat_confirm_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """"Suhbatni tozalash" — tasdiqlash/orqaga."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=t("btn_clear_chat_yes", lang), callback_data="clearchat_confirm")
+    builder.button(text=t("btn_clear_chat_back", lang), callback_data="clearchat_cancel")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
 # === ADMIN ===
 
 def add_movie_confirm_keyboard(lang: str) -> InlineKeyboardMarkup:

@@ -25,6 +25,9 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
                 KeyboardButton(text=t("btn_trend", lang)),
                 KeyboardButton(text=t("btn_language", lang)),
             ],
+            [
+                KeyboardButton(text=t("btn_clear_chat", lang)),
+            ],
         ],
         resize_keyboard=True,
     )

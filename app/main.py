@@ -16,6 +16,8 @@ from app.database import session_factory
 from app.handlers import build_router
 from app.middlewares.admin_menu_interrupt import AdminMenuInterruptMiddleware
 from app.middlewares.db_session import DbSessionMiddleware
+from app.middlewares.message_log import MessageLogMiddleware
+from app.middlewares.message_log_session import MessageLogSessionMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.subscription import SubscriptionMiddleware
 from app.middlewares.user_context import UserContextMiddleware
@@ -60,6 +62,10 @@ def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
     # shuning uchun holatni shu yerda tozalash real ta'sir qiladi.
     dp.message.outer_middleware(AdminMenuInterruptMiddleware())
 
+    # "🧹 Suhbatni tozalash" uchun: HAR bir kiruvchi xabarni qayd etadi
+    # (shu sabab ham OUTER — handler topilmasa ham qayd bo'lishi kerak).
+    dp.message.outer_middleware(MessageLogMiddleware(redis))
+
 
 async def main() -> None:
     load_translations()
@@ -72,6 +78,9 @@ async def main() -> None:
     storage = await _make_storage(redis)
 
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties())
+    # "🧹 Suhbatni tozalash" uchun: HAR bir chiquvchi Telegram API chaqiruvini
+    # (qaysi handler yuborganidan qat'i nazar) ushlab, message_id'ni qayd etadi.
+    bot.session.middleware(MessageLogSessionMiddleware(redis))
     dp = Dispatcher(storage=storage)
 
     # Handlerlarga qo'shimcha kontekst uzatamiz

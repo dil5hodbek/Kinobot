@@ -9,6 +9,7 @@ from aiogram import Router
 from app.handlers import (
     channel_intake,
     channels,
+    clear_chat,
     language,
     search,
     start,
@@ -28,6 +29,7 @@ def build_router() -> Router:
     router.include_router(build_admin_router())
     router.include_router(channels.router)
     router.include_router(trend.router)
+    router.include_router(clear_chat.router)
     # search — eng oxirida (umumiy matn handleri barcha qolgan matnni tutadi)
     router.include_router(search.router)
     return router
