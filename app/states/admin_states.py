@@ -45,3 +45,7 @@ class EditMovie(StatesGroup):
 
 class DeleteMovie(StatesGroup):
     waiting_query = State()
+
+
+class TrendMovies(StatesGroup):
+    waiting_add_query = State()

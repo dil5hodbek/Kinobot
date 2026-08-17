@@ -72,7 +72,7 @@ def admin_movies_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
 
 
 def admin_management_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
-    """"📊 Boshqaruv" submenu — statistika, reklama, kanal."""
+    """"📊 Boshqaruv" submenu — statistika, reklama, kanal, trend."""
     return ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -81,6 +81,9 @@ def admin_management_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text=t("btn_add_channel", lang)),
+                KeyboardButton(text=t("btn_trend_movies", lang)),
+            ],
+            [
                 KeyboardButton(text=t("btn_back", lang)),
             ],
         ],

@@ -11,7 +11,7 @@
   "multiple_found": "🔎 Topilgan kinolar — birini tanlang:",
   "genre_movies_title": "🎭 {genre} janridagi kinolar:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Kod: {code}\n👁 {views} marta ko'rilgan",
-  "trend_title": "🔥 Eng mashhur kinolar:",
+  "trend_title": "🔥 Trend kinolar:",
   "trend_empty": "🔥 Hozircha trend kinolar yo'q.",
   "movie_unavailable": "⚠️ Video vaqtincha mavjud emas. Admin: {admin_phone}",
   "help": "ℹ️ Kino kodi yoki nomini yuboring.\n👨‍💻 Admin: {admin_phone}",
@@ -39,6 +39,7 @@
   "btn_stats": "📊 Statistika",
   "btn_broadcast": "📣 Xabar yuborish",
   "btn_add_channel": "📢 Kanal qo'shish",
+  "btn_trend_movies": "🔥 Trend kinolar",
   "btn_codes": "📋 Kodlar",
   "btn_delete_movie": "🗑 O'chirish",
   "btn_exit": "🔙 Chiqish",
@@ -125,5 +126,14 @@
   "views_label": "👁",
   "btn_watch_movie": "🎬 Filmni ko'rish",
   "promo_btn_bot": "🎬 Yana qiziqarli kinolar shu yerda!",
-  "promo_btn_channel": "🔥 Rasmiy kanalga obuna bo'ling"
+  "promo_btn_channel": "🔥 Rasmiy kanalga obuna bo'ling",
+  "trend_admin_title": "🔥 Trend kinolar ({count}/{limit}):\n\n🗑 O'chirish uchun kinoni bosing.",
+  "trend_admin_empty": "🔥 Hozircha trend kino yo'q.",
+  "trend_add_ask": "➕ Trendga qo'shish uchun kino kodi yoki nomini yuboring.\n\nBoshqa kerak bo'lmasa — pastdagi boshqa tugmani bosing.",
+  "trend_add_not_found": "❌ Bunday kino topilmadi.",
+  "trend_add_already": "⚠️ Bu kino allaqachon trend ro'yxatida.",
+  "trend_add_full": "⚠️ Trend to'liq ({limit}/{limit}). Avval birortasini o'chiring.",
+  "trend_add_done": "✅ Trendga qo'shildi.",
+  "trend_removed": "✅ Trenddan olib tashlandi.",
+  "trend_pick": "Bir nechta natija topildi. Trendga qo'shish uchun birini tanlang:"
 }

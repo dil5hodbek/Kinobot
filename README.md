@@ -8,7 +8,7 @@ bot yopiq kanaldan videoni `copy_message` orqali yuboradi.
 - 🌐 3 tilda interfeys: 🇺🇿 O'zbek / 🇷🇺 Русский / 🇬🇧 English
 - 🔒 Majburiy obuna (bir yoki bir nechta kanal, dinamik boshqariladi)
 - 🔍 Kod va nom bo'yicha qidiruv (fuzzy search, `pg_trgm` — imlo xatolariga chidamli)
-- 🔥 Trend kinolar (eng ko'p ko'rilgan)
+- 🔥 Trend kinolar (admin qo'lda tanlaydi, ko'pi bilan `TREND_LIMIT` ta)
 - 🛠 Bot ichidagi admin panel (kino qo'shish, tahrirlash, statistika, broadcast, kanallar)
 - ⏳ Redis asosidagi rate-limit va obuna keshi
 - 📢 Har bir yuborilgan kino ostida botga/kanalga reklama tugmalari (organik o'sish uchun)
@@ -137,6 +137,21 @@ Foydalanuvchi endi kod yoki nom yozib kinoni oladi.
 > To'liq o'chirish: kino, uning ko'rish tarixi bazadan o'chadi va **kod bo'shaydi**
 > (o'sha kodni yangi kinoga qayta ishlatish mumkin). "Tahrirlash" faqat maydonlarni
 > (nom/yil/janr) o'zgartiradi — o'chirish alohida tugmada.
+
+## Trend kinolarni boshqarish (admin)
+
+Trend endi ko'rishlar soniga avtomatik bog'liq emas — admin qo'lda tanlaydi.
+
+1. `/admin` → **📊 Boshqaruv** → **🔥 Trend kinolar**.
+2. Bot joriy trend ro'yxatini ko'rsatadi (har biri oldida **🗑** — bosilsa trenddan olib tashlanadi).
+3. Qo'shish uchun kino kodi yoki nomini yuboring:
+   - Bitta topilsa — darhol trendga qo'shiladi.
+   - Bir nechta topilsa — ro'yxatdan tanlaysiz.
+4. Ro'yxat to'lgan bo'lsa (standart **10/10**, `TREND_LIMIT` orqali sozlanadi) —
+   avval birontasini o'chirish kerak.
+
+Foydalanuvchiga "🔥 Trend kinolar" tugmasida shu ro'yxat (nomi + kodi bilan)
+ko'rinadi, bosilganda kino bitta xabar sifatida yuboriladi.
 
 ## Reklama yuborish (broadcast)
 

@@ -11,7 +11,7 @@
   "multiple_found": "🔎 Movies found — pick one:",
   "genre_movies_title": "🎭 Movies in the {genre} genre:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Code: {code}\n👁 {views} views",
-  "trend_title": "🔥 Most popular movies:",
+  "trend_title": "🔥 Trending movies:",
   "trend_empty": "🔥 No trending movies yet.",
   "movie_unavailable": "⚠️ Video is temporarily unavailable. Admin: {admin_phone}",
   "help": "ℹ️ Send a movie code or title.\n👨‍💻 Admin: {admin_phone}",
@@ -39,6 +39,7 @@
   "btn_stats": "📊 Statistics",
   "btn_broadcast": "📣 Broadcast",
   "btn_add_channel": "📢 Add channel",
+  "btn_trend_movies": "🔥 Trending movies",
   "btn_codes": "📋 Codes",
   "btn_delete_movie": "🗑 Delete",
   "btn_exit": "🔙 Exit",
@@ -125,5 +126,14 @@
   "views_label": "👁",
   "btn_watch_movie": "🎬 Watch the movie",
   "promo_btn_bot": "🎬 Even more great movies here!",
-  "promo_btn_channel": "🔥 Join our official channel"
+  "promo_btn_channel": "🔥 Join our official channel",
+  "trend_admin_title": "🔥 Trending movies ({count}/{limit}):\n\n🗑 Tap a movie to remove it.",
+  "trend_admin_empty": "🔥 No trending movies yet.",
+  "trend_add_ask": "➕ To add to trending, send the movie code or name.\n\nIf you don't need anything else, tap another button below.",
+  "trend_add_not_found": "❌ Movie not found.",
+  "trend_add_already": "⚠️ This movie is already trending.",
+  "trend_add_full": "⚠️ Trending is full ({limit}/{limit}). Remove one first.",
+  "trend_add_done": "✅ Added to trending.",
+  "trend_removed": "✅ Removed from trending.",
+  "trend_pick": "Multiple results found. Pick a movie to add to trending:"
 }

@@ -11,6 +11,7 @@ from app.handlers.admin import (
     edit_movie,
     panel,
     stats,
+    trend_movies,
 )
 
 
@@ -25,4 +26,5 @@ def build_admin_router() -> Router:
     router.include_router(channels.router)
     router.include_router(stats.router)
     router.include_router(codes.router)
+    router.include_router(trend_movies.router)
     return router

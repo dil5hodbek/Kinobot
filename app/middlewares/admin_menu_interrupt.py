@@ -58,6 +58,7 @@ _MENU_BUTTON_KEYS = (
     "btn_stats",
     "btn_broadcast",
     "btn_add_channel",
+    "btn_trend_movies",
 )
 
 

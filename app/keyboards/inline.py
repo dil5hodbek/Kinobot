@@ -67,7 +67,7 @@ def trend_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for idx, movie in enumerate(movies, start=1):
         title = movie_title(movie, lang)
-        label = f"{idx}. {title} ({t('views_label', lang)} {movie.views_count})"
+        label = f"{idx}. {title} — {movie.code}"
         builder.row(
             InlineKeyboardButton(text=label, callback_data=f"movie:{movie.id}")
         )
@@ -178,6 +178,33 @@ def delete_confirm_keyboard(movie_id: int, lang: str) -> InlineKeyboardMarkup:
     builder.button(text=t("btn_delete_yes", lang), callback_data=f"delyes:{movie_id}")
     builder.button(text=t("btn_delete_no", lang), callback_data="delno")
     builder.adjust(2)
+    return builder.as_markup()
+
+
+def trend_admin_list_keyboard(movies: list[Movie]) -> InlineKeyboardMarkup:
+    """Admin trend boshqaruvi — joriy ro'yxat, har biri oldida o'chirish tugmasi."""
+    builder = InlineKeyboardBuilder()
+    for movie in movies:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"🗑 {movie.title_uz} — {movie.code}",
+                callback_data=f"trendrm:{movie.id}",
+            )
+        )
+    return builder.as_markup()
+
+
+def trend_pick_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
+    """Nom bo'yicha bir nechta natija — trendga qo'shish uchun kinoni tanlash."""
+    builder = InlineKeyboardBuilder()
+    for movie in movies:
+        title = movie_title(movie, lang)
+        builder.row(
+            InlineKeyboardButton(
+                text=f"🎬 {title} — {movie.code}",
+                callback_data=f"trendpick:{movie.id}",
+            )
+        )
     return builder.as_markup()
 
 

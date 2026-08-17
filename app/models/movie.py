@@ -46,6 +46,15 @@ class Movie(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+    # Admin panelda qo'lda boshqariladigan trend ro'yxati (ko'rishlar soniga
+    # avtomatik bog'liq emas). trending_added_at — ro'yxatdagi tartib uchun
+    # (eng yangi qo'shilgani birinchi).
+    is_trending: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    trending_added_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

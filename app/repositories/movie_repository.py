@@ -119,6 +119,18 @@ class MovieRepository:
         return list(result.scalars().all())
 
     async def get_trending(self, limit: int) -> list[Movie]:
+        """Admin qo'lda belgilagan trend ro'yxati (eng yangi qo'shilgani birinchi)."""
+        result = await self._session.execute(
+            select(Movie)
+            .where(Movie.is_active.is_(True), Movie.is_trending.is_(True))
+            .order_by(Movie.trending_added_at.desc(), Movie.id.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def get_top(self, limit: int) -> list[Movie]:
+        """Eng ko'p ko'rilgan kinolar (statistika uchun — trend ro'yxatidan
+        mustaqil, admin qo'lda tanlagan-tanlamaganidan qat'i nazar)."""
         result = await self._session.execute(
             select(Movie)
             .where(Movie.is_active.is_(True))
@@ -127,8 +139,23 @@ class MovieRepository:
         )
         return list(result.scalars().all())
 
-    async def get_top(self, limit: int) -> list[Movie]:
-        return await self.get_trending(limit)
+    async def count_trending(self) -> int:
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(Movie)
+            .where(Movie.is_active.is_(True), Movie.is_trending.is_(True))
+        )
+        return int(result.scalar_one())
+
+    async def set_trending(self, movie_id: int, trending: bool) -> None:
+        await self._session.execute(
+            update(Movie)
+            .where(Movie.id == movie_id)
+            .values(
+                is_trending=trending,
+                trending_added_at=func.now() if trending else None,
+            )
+        )
 
     async def next_auto_code(self) -> str:
         """Faqat raqamli kodlar orasidan keyingi bo'sh raqamni topadi (bitta so'rov)."""

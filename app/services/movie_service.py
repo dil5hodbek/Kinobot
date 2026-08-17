@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from enum import Enum, auto
 
 from aiogram import Bot
 from aiogram.exceptions import (
@@ -19,6 +20,15 @@ from app.utils.format import movie_title
 from app.utils.i18n import t
 
 logger = logging.getLogger(__name__)
+
+
+class AddTrendResult(Enum):
+    """Kinoni trendga qo'shish urinishi natijasi."""
+
+    ADDED = auto()
+    ALREADY_TRENDING = auto()
+    LIMIT_REACHED = auto()
+    NOT_FOUND = auto()
 
 
 class MovieDeliveryError(Exception):
@@ -56,6 +66,28 @@ class MovieService:
 
     async def get_trending(self) -> list[Movie]:
         return await self._repo.get_trending(settings.trend_limit)
+
+    async def trending_count(self) -> int:
+        return await self._repo.count_trending()
+
+    async def add_to_trending(self, movie_id: int) -> AddTrendResult:
+        """Kinoni admin qo'lda tanlagan trend ro'yxatiga qo'shadi.
+
+        `settings.trend_limit` — foydalanuvchiga ko'rinadigan MAKSIMAL son
+        (spec: userga maksimal 10 ta) — shu chegaradan oshirilmaydi.
+        """
+        movie = await self._repo.get_by_id(movie_id)
+        if movie is None:
+            return AddTrendResult.NOT_FOUND
+        if movie.is_trending:
+            return AddTrendResult.ALREADY_TRENDING
+        if await self._repo.count_trending() >= settings.trend_limit:
+            return AddTrendResult.LIMIT_REACHED
+        await self._repo.set_trending(movie_id, True)
+        return AddTrendResult.ADDED
+
+    async def remove_from_trending(self, movie_id: int) -> None:
+        await self._repo.set_trending(movie_id, False)
 
     async def get_all_movies(self) -> list[Movie]:
         """Barcha kinolar, kod bo'yicha raqamli-aware tartiblangan (hisobot uchun)."""
