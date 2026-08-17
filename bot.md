@@ -12,7 +12,7 @@ Telegram bot: foydalanuvchi **kino kodi** (masalan `777`) yoki **kino nomi** (ka
 - 3 tilda interfeys: 🇺🇿 O'zbek / 🇷🇺 Русский / 🇬🇧 English
 - Majburiy obuna (bir yoki bir nechta kanal)
 - Kod va nom bo'yicha qidiruv (fuzzy search, pg_trgm)
-- Trend kinolar (eng ko'p ko'rilgan)
+- Trend kinolar (admin qo'lda tanlaydi — bo'lim 5.4, TREND_LIMIT tagacha)
 - Admin panel (bot ichida)
 - Statistika (foydalanuvchilar, ko'rishlar)
 
@@ -180,35 +180,21 @@ CREATE TABLE required_channels (
 - Natija Redis'da 60 soniya keshlanadi (Telegram API limitini asrash uchun).
 - `left`, `kicked` statuslar = obuna yo'q; `member`, `administrator`, `creator` = bor.
 
-### 5.3. Asosiy menyu — Reply Keyboard (2 ta yonma-yon + 1 pastda)
+### 5.3. Asosiy menyu — Reply Keyboard (Bosqich 6'da yangilandi)
 
 ```
 ┌─────────────────┬─────────────────┐
 │   🔍 Qidiruv    │   📢 Kanallar   │
+├─────────────────┼─────────────────┤
+│ 🔥 Trend kinolar│    🌐 Til       │
 ├─────────────────┴─────────────────┤
-│         🔥 Trend kinolar          │
+│      🧹 Suhbatni tozalash         │
 └───────────────────────────────────┘
 ```
 
-aiogram 3 kodi:
-
-```python
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
-def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
-    labels = {
-        "uz": ("🔍 Qidiruv", "📢 Kanallar", "🔥 Trend kinolar"),
-        "ru": ("🔍 Поиск", "📢 Каналы", "🔥 Топ фильмы"),
-        "en": ("🔍 Search", "📢 Channels", "🔥 Trending"),
-    }[lang]
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=labels[0]), KeyboardButton(text=labels[1])],
-            [KeyboardButton(text=labels[2])],
-        ],
-        resize_keyboard=True,
-    )
-```
+Haqiqiy kod: `app/keyboards/reply.py::main_menu_keyboard`. Yuqoridagi diagramma
+sxematik — aniq tugma matnlari/tartibi uchun shu faylga qarang (bu yerdagi
+qadimgi kod namunasi Bosqich 6'dan oldingi holatga mos edi, olib tashlandi).
 
 ### 5.4. Tugmalar xatti-harakati
 
@@ -216,7 +202,7 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
 |---|---|
 | 🔍 Qidiruv | "Kino kodi yoki nomini yuboring" xabari. Keyingi xabar qidiruv sifatida qabul qilinadi (aslida istalgan matn har doim qidiruv — bu tugma faqat yo'naltiruvchi) |
 | 📢 Kanallar | Majburiy obuna kanallari ro'yxati (inline url tugmalar) |
-| 🔥 Trend kinolar | Top-10 eng ko'p ko'rilgan kino — inline tugmalar: `1. Nomi (👁 12 543)`, bosilsa kino yuboriladi |
+| 🔥 Trend kinolar | Admin panelda ("Boshqaruv → Trend kinolar") qo'lda tanlangan ro'yxat — ko'rishlar soniga bog'liq EMAS, ko'pi bilan `TREND_LIMIT` (standart 10) ta. Matn xabarida "N. Nomi — Kod: X" ro'yxat, tagida faqat KOD bilan ixcham tugmalar (masalan `🎬 7`), bosilsa kino yuboriladi |
 
 ### 5.5. Qidiruv natijalari
 
@@ -354,7 +340,7 @@ yo'naltiradi.
   "not_found": "❌ Hech narsa topilmadi. Kodni tekshiring yoki boshqa nom yozing.",
   "multiple_found": "🔎 Topilgan kinolar — birini tanlang:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Kod: {code}\n👁 {views} marta ko'rilgan",
-  "trend_title": "🔥 Eng mashhur kinolar:",
+  "trend_title": "🔥 Trend kinolar:",
   "movie_unavailable": "⚠️ Video vaqtincha mavjud emas. Admin: {admin_phone}",
   "help": "ℹ️ Kino kodi yoki nomini yuboring.\n👨‍💻 Admin: {admin_phone}"
 }
@@ -516,7 +502,7 @@ Dockerfile: `python:3.12-slim`, multi-stage kerak emas (bot yengil), lekin `pip 
 **Bosqich 2 — Qidiruv va trend:**
 - [x] pg_trgm fuzzy search (nom bo'yicha, 3 tilda)
 - [x] Ko'p natijali inline tanlash
-- [x] Trend kinolar (views_count)
+- [x] Trend kinolar (views_count — Bosqich 6'da admin qo'lda boshqaradigan ro'yxatga almashtirildi)
 - [x] movie_views statistika jadvali
 
 **Bosqich 3 — Admin kengaytmalari:**
@@ -538,6 +524,33 @@ Dockerfile: `python:3.12-slim`, multi-stage kerak emas (bot yengil), lekin `pip 
 - [x] Admin menyu 2 qavatli (HUB + submenu, bo'lim 6)
 - [x] DB/Redis connection pool sozlandi (bo'lim 14)
 - [ ] Webhook rejimi, Postgres read-replica — hozircha kerak emas (bo'lim 14)
+
+**Bosqich 6 — Tozalash, reklama, qo'lda trend, bug-tuzatishlar:**
+- [x] "🧹 Suhbatni tozalash" — foydalanuvchi so'nggi 48 soatlik yozishmasini
+      o'chirishi mumkin (Telegram Bot API'ning qat'iy 48 soatlik chegarasi
+      sabab, faqat bot ishlab turgan paytda ko'rgan xabarlarni o'chira oladi —
+      Redis ZSET orqali kuzatiladi: app/middlewares/message_log*.py,
+      app/services/chat_cleanup_service.py)
+- [x] Har bir yuborilgan kino ostida reklama tugmalari (botga + rasmiy
+      kanalga havola) — PROMO_BOT_USERNAME/PROMO_CHANNEL_USERNAME orqali
+- [x] "📢 Kanallar" ro'yxatida obuna holati belgisi (✅/➕)
+- [x] Trend kinolar — views_count'dan ADMIN QO'LDA BOSHQARADIGAN ro'yxatga
+      o'tkazildi (bo'lim 5.4; admin: Boshqaruv → Trend kinolar, qo'shish/
+      o'chirish, ko'pi bilan TREND_LIMIT ta)
+- [x] Admin FSM oqimlarining menyu tugmasi bosilganda to'g'ri bekor
+      bo'lishi (AdminMenuInterruptMiddleware) — aiogram'da StateFilter
+      filtrlardan OLDIN ishlashi kerak (oddiy inner middleware YETARLI EMAS)
+      va state.clear()dan keyin data["raw_state"]ni ham qo'lda tozalash SHART
+      (StateFilter buni jonli storage'dan emas, oldindan olingan snapshot'dan
+      o'qiydi) — ikkalasi ham keyingi shunga o'xshash ishlarda yodda tutilsin
+- [x] Kod bo'yicha qidiruv endi alifbo-raqamli kodlarni ham to'g'ri topadi
+      (avval faqat sof raqamlarni "kod" deb hisoblardi)
+- [x] Admin "o'chirish"/"trendga qo'shish" umumiy qidiruv logikasi
+      MovieService.resolve_admin_query()ga markazlashtirildi (avval har
+      ikkala faylda mustaqil yozilgan edi, drift'ga olib kelgan edi)
+- [x] Kino yuborishda TelegramRetryAfter (flood-control) endi ushlanadi
+      (bitta qayta urinish bilan) — avval foydalanuvchi hech qanday javob
+      olmay qolardi
 
 ---
 
