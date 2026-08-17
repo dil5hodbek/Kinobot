@@ -415,7 +415,7 @@ Dockerfile: `python:3.12-slim`, multi-stage kerak emas (bot yengil), lekin `pip 
 1. **Secrets** — faqat `.env`, hech qachon kod/git'da emas. `.gitignore`da `.env` bo'lishi shart.
 2. **Rate-limit** — Redis: user_id bo'yicha `RATE_LIMIT_PER_MINUTE` (default 20 xabar/min), oshsa "⏳ Sekinroq..." javob.
 3. **Admin tekshiruvi** — har bir admin handler'da `telegram_id in settings.admin_ids` filter (aiogram Filter klassi sifatida).
-4. **Input validation** — kino kodi max 10 belgi, qidiruv matni max 100 belgi (trim qilinadi).
+4. **Input validation** — kino kodi max 20 belgi (bo'lim 4 dagi `code VARCHAR(20)` sxemasiga mos — raqamli qidiruv qat'iy `^\d{1,10}$` bilan cheklangan, admin qo'lda kiritgan kod esa harflarni ham qamrab olishi mumkin, shu sabab 20), qidiruv matni max 100 belgi (trim qilinadi).
 5. **Broadcast xavfsizligi** — tasdiqlash bosqichi majburiy ("N ta foydalanuvchiga yuborilsinmi?").
 6. **copy_message xatolari** — try/except: xabar o'chirilgan → kino `is_active=False`, adminga xabar.
 7. **Loglar** — token/parol hech qachon log'ga yozilmaydi.

@@ -22,6 +22,7 @@ import logging
 from aiogram import Bot, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import Message
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -95,16 +96,30 @@ async def intake_new_post(message: Message, session: AsyncSession) -> None:
         await _notify_admins(message.bot, t("intake_duplicate", lang, code=code))
         return
 
-    movie = await service.add_movie(
-        code=code,
-        channel_id=message.chat.id,
-        message_id=message.message_id,
-        title_uz=parsed.title,
-        title_ru=None,
-        title_en=None,
-        year=parsed.year,
-        genre=parsed.genre,
-    )
+    try:
+        movie = await service.add_movie(
+            code=code,
+            channel_id=message.chat.id,
+            message_id=message.message_id,
+            title_uz=parsed.title,
+            title_ru=None,
+            title_en=None,
+            year=parsed.year,
+            genre=parsed.genre,
+        )
+        await session.flush()
+    except IntegrityError:
+        # Bir nechta post deyarli bir vaqtda kelsa (masalan bot qayta
+        # ulangach navbatdagi postlar bittada keladi), ikkalasi ham
+        # yuqoridagi code_exists() tekshiruvini "band emas" deb o'tishi
+        # mumkin — unique constraint shu yerda ushlaydi. Krash o'rniga
+        # to'qnashuv sifatida ko'rsatamiz (admin/add_movie.py bilan bir xil
+        # naqsh) — video hech qachon jimgina yo'qolib qolmaydi.
+        await session.rollback()
+        logger.warning("Storage post: kod to'qnashuvi (race) — %s", code)
+        await _notify_admins(message.bot, t("intake_duplicate", lang, code=code))
+        return
+
     logger.info("Kanaldan kino qo'shildi: kod=%s nom=%r", movie.code, movie.title_uz)
     await _notify_admins(
         message.bot,

@@ -79,30 +79,36 @@ async def _run_broadcast(
             await session.commit()
         blocked_ids.clear()
 
-    for telegram_id in recipients:
-        try:
-            await _copy_once(bot, telegram_id, from_chat_id, message_id)
-            result.sent += 1
-        except TelegramRetryAfter as exc:
-            await asyncio.sleep(exc.retry_after)
+    try:
+        for telegram_id in recipients:
             try:
                 await _copy_once(bot, telegram_id, from_chat_id, message_id)
                 result.sent += 1
-            except TelegramAPIError:
+            except TelegramRetryAfter as exc:
+                await asyncio.sleep(exc.retry_after)
+                try:
+                    await _copy_once(bot, telegram_id, from_chat_id, message_id)
+                    result.sent += 1
+                except TelegramAPIError:
+                    result.failed += 1
+            except TelegramForbiddenError:
+                result.blocked += 1
+                blocked_ids.append(telegram_id)
+            except TelegramAPIError as exc:
+                logger.warning("Broadcast xatosi (%s): %s", telegram_id, exc)
                 result.failed += 1
-        except TelegramForbiddenError:
-            result.blocked += 1
-            blocked_ids.append(telegram_id)
-        except TelegramAPIError as exc:
-            logger.warning("Broadcast xatosi (%s): %s", telegram_id, exc)
-            result.failed += 1
 
-        if len(blocked_ids) >= _BLOCK_FLUSH_EVERY:
-            await flush_blocked()
+            if len(blocked_ids) >= _BLOCK_FLUSH_EVERY:
+                await flush_blocked()
 
-        await asyncio.sleep(_DELAY)
-
-    await flush_blocked()
+            await asyncio.sleep(_DELAY)
+    finally:
+        # shutdown_jobs() bot to'xtaganда task.cancel() qiladi — CancelledError
+        # shu yerda ushlanadi (finally har doim ishlaydi). Flush BAJARILISHI
+        # SHART, aks holda oxirgi <_BLOCK_FLUSH_EVERY tagacha "bloklagan"
+        # foydalanuvchi is_blocked=True bo'lib yozilmay qoladi — ular
+        # keyingi broadcast'da yana (behuda) qayta urinilardi.
+        await flush_blocked()
 
     # Yakuniy hisobot adminga
     try:

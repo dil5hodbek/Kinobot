@@ -115,11 +115,14 @@ class MovieService:
         bot: Bot, movie: Movie, exc: Exception
     ) -> None:
         """Video yuborilmagach adminlarni ogohlantiradi (spec 10.6)."""
-        text = (
-            f"⚠️ Kino yuborib bo'lmadi va faolsizlantirildi.\n"
-            f"Kod: {movie.code}\nNomi: {movie.title_uz}\n"
-            f"channel_id: {movie.channel_id} | message_id: {movie.message_id}\n"
-            f"Sabab: {exc}"
+        text = t(
+            "dead_link_alert",
+            settings.default_language,
+            code=movie.code,
+            title=movie.title_uz,
+            channel_id=movie.channel_id,
+            message_id=movie.message_id,
+            reason=str(exc),
         )
         for admin_id in settings.admin_ids:
             try:

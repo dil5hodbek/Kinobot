@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.keyboards.inline import add_movie_confirm_keyboard, skip_keyboard
 from app.keyboards.reply import admin_menu_keyboard
 from app.services.movie_service import MovieService
@@ -34,6 +35,16 @@ async def got_forward(message: Message, lang: str, state: FSMContext) -> None:
     origin = message.forward_origin
     if origin is None or origin.type != MessageOriginType.CHANNEL:
         await message.answer(t("add_movie_not_forward", lang))
+        return
+
+    # channel_intake.py'ning avtomatik yo'li faqat STORAGE_CHANNEL_ID dan
+    # kelgan postni qabul qiladi (xavfsizlik izohi shu faylда) — qo'lda
+    # forward oqimida ham xuddi shu tekshiruv bo'lishi kerak, aks holda
+    # admin bot a'zo bo'lmagan/huquqi yo'q kanaldan forward qilib kino
+    # saqlashi mumkin — bu birinchi haydovchi so'raganда aniqlanardi
+    # (deliver() uni faolsizlantiradi), ammo admin darhol bilmasdi.
+    if origin.chat.id != settings.storage_channel_id:
+        await message.answer(t("add_movie_wrong_channel", lang))
         return
 
     await state.update_data(

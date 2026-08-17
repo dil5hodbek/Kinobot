@@ -153,7 +153,13 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-Sof-logika testlari (config parsing, i18n parity/format, til fallback) DB'siz ishlaydi.
+Ikki qatlam: sof-logika testlari (config parsing, i18n parity/format, til
+fallback, caption parsing, Excel eksport) va biznes-logika testlari (admin
+ruxsati, rate-limit, majburiy obuna, kino yuborish/dead-link, broadcast,
+kod to'qnashuvi race-condition). Ikkalasi ham **haqiqiy DB/Redis/Telegram
+API'siz** ishlaydi — Bot/Redis/Session `unittest.mock` bilan almashtirilgan
+(`tests/helpers.py`), shuning uchun CI'da yoki oddiy `pip install`dan keyin
+tezda ishga tushadi.
 
 ## Lokal ishga tushirish (Docker'siz)
 
