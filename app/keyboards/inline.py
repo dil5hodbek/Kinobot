@@ -101,14 +101,14 @@ def promo_keyboard(lang: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=t("promo_btn_bot", lang),
-            url=f"https://t.me/{settings.promo_bot_username}",
+            text=t("promo_btn_channel", lang),
+            url=f"https://t.me/{settings.promo_channel_username}",
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=t("promo_btn_channel", lang),
-            url=f"https://t.me/{settings.promo_channel_username}",
+            text=t("promo_btn_bot", lang),
+            url=f"https://t.me/{settings.promo_bot_username}",
         )
     )
     return builder.as_markup()
