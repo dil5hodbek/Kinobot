@@ -1,6 +1,8 @@
 """Kichik formatlash yordamchilari."""
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from app.models.movie import Movie
 
 
@@ -12,3 +14,12 @@ def movie_title(movie: Movie, lang: str) -> str:
         "en": movie.title_en,
     }
     return mapping.get(lang) or movie.title_uz
+
+
+def looks_like_url(value: str) -> bool:
+    """`value` http/https havola shaklidami (link-kino qo'shish/tahrirlash uchun)."""
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)

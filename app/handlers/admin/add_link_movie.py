@@ -7,8 +7,6 @@ Yuborishda video copy_message EMAS — inline havola tugmasi (movie_service.py).
 """
 from __future__ import annotations
 
-from urllib.parse import urlparse
-
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -21,6 +19,7 @@ from app.keyboards.reply import admin_menu_keyboard
 from app.services.movie_service import MovieService
 from app.states.admin_states import AddLinkMovie
 from app.utils.filters import ButtonText, IsAdmin
+from app.utils.format import looks_like_url
 from app.utils.i18n import t
 
 router = Router(name="admin_add_link_movie")
@@ -29,14 +28,6 @@ router.callback_query.filter(IsAdmin())
 
 _MAX_CODE_LEN = 20
 _MAX_URL_LEN = 500
-
-
-def _looks_like_url(value: str) -> bool:
-    try:
-        parsed = urlparse(value)
-    except ValueError:
-        return False
-    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 
 @router.message(StateFilter(None), ButtonText("btn_add_link_movie"))
@@ -48,7 +39,7 @@ async def start_add_link(message: Message, lang: str, state: FSMContext) -> None
 @router.message(AddLinkMovie.waiting_url)
 async def got_url(message: Message, lang: str, state: FSMContext) -> None:
     url = (message.text or "").strip()
-    if not url or len(url) > _MAX_URL_LEN or not _looks_like_url(url):
+    if not url or len(url) > _MAX_URL_LEN or not looks_like_url(url):
         await message.answer(t("add_link_url_invalid", lang))
         return
 

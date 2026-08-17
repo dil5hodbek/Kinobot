@@ -53,17 +53,19 @@ async def got_query(
 
     service = MovieService(session)
 
-    # 1) Kod bo'yicha aniq (faol yoki nofaol)
-    if _CODE_RE.match(query):
-        movie = await service.find_by_code_any(query)
-        if movie is None:
-            await message.answer(t("delete_not_found", lang))
-            return
+    # 1) Kod bo'yicha aniq (faol yoki nofaol; kod raqam yoki matn bo'lishi
+    # mumkin — formatidan qat'i nazar avval aniq moslikni tekshiramiz).
+    movie = await service.find_by_code_any(query)
+    if movie is not None:
         await state.clear()
         await message.answer(
             _confirm_text(movie, lang),
             reply_markup=delete_confirm_keyboard(movie.id, lang),
         )
+        return
+    if _CODE_RE.match(query):
+        # Sof raqam aniq kod urinishi edi — topilmasa nom qidiruviga o'tmaymiz.
+        await message.answer(t("delete_not_found", lang))
         return
 
     # 2) Nom bo'yicha qidiruv

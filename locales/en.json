@@ -110,6 +110,7 @@
   "btn_edit_title": "✏️ Title (uz)",
   "btn_edit_year": "📅 Year",
   "btn_edit_genre": "🎭 Genre",
+  "btn_edit_url": "🔗 Link",
   "btn_edit_delete": "🗑 Delete (soft)",
   "edit_ask_new_value": "Enter the new value:",
   "edit_saved": "✅ Saved.",

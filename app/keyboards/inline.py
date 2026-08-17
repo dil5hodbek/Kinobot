@@ -147,10 +147,14 @@ def delete_confirm_keyboard(movie_id: int, lang: str) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def edit_movie_keyboard(movie_id: int, lang: str) -> InlineKeyboardMarkup:
+def edit_movie_keyboard(movie: Movie, lang: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text=t("btn_edit_title", lang), callback_data=f"edit:title:{movie_id}")
-    builder.button(text=t("btn_edit_year", lang), callback_data=f"edit:year:{movie_id}")
-    builder.button(text=t("btn_edit_genre", lang), callback_data=f"edit:genre:{movie_id}")
-    builder.adjust(2, 1)
+    builder.button(text=t("btn_edit_title", lang), callback_data=f"edit:title:{movie.id}")
+    builder.button(text=t("btn_edit_year", lang), callback_data=f"edit:year:{movie.id}")
+    builder.button(text=t("btn_edit_genre", lang), callback_data=f"edit:genre:{movie.id}")
+    if movie.source_type == "link":
+        builder.button(text=t("btn_edit_url", lang), callback_data=f"edit:url:{movie.id}")
+        builder.adjust(2, 2)
+    else:
+        builder.adjust(2, 1)
     return builder.as_markup()

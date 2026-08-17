@@ -110,6 +110,7 @@
   "btn_edit_title": "✏️ Название (uz)",
   "btn_edit_year": "📅 Год",
   "btn_edit_genre": "🎭 Жанр",
+  "btn_edit_url": "🔗 Ссылка",
   "btn_edit_delete": "🗑 Удалить (soft)",
   "edit_ask_new_value": "Введите новое значение:",
   "edit_saved": "✅ Сохранено.",

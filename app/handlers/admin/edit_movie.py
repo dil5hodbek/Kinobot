@@ -12,14 +12,20 @@ from app.keyboards.reply import admin_menu_keyboard
 from app.services.movie_service import MovieService
 from app.states.admin_states import EditMovie
 from app.utils.filters import ButtonText, IsAdmin
-from app.utils.format import movie_title
+from app.utils.format import looks_like_url, movie_title
 from app.utils.i18n import t
 
 router = Router(name="admin_edit_movie")
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
 
-_FIELD_COLUMN = {"title": "title_uz", "year": "year", "genre": "genre"}
+_FIELD_COLUMN = {
+    "title": "title_uz",
+    "year": "year",
+    "genre": "genre",
+    "url": "external_url",
+}
+_MAX_URL_LEN = 500
 
 
 @router.message(StateFilter(None), ButtonText("btn_edit_movie"))
@@ -43,7 +49,7 @@ async def got_edit_code(
     await state.set_state(EditMovie.choosing_field)
     await message.answer(
         t("edit_menu", lang, title=movie_title(movie, lang), code=movie.code),
-        reply_markup=edit_movie_keyboard(movie.id, lang),
+        reply_markup=edit_movie_keyboard(movie, lang),
     )
 
 
@@ -63,6 +69,14 @@ async def choose_field(
 
     if field not in _FIELD_COLUMN:
         return
+
+    if field == "url":
+        # "url" tugmasi faqat link-kinolar uchun ko'rsatiladi (keyboard), lekin
+        # eski/keshlangan xabardagi tugma bosilishi mumkin — CHECK constraint
+        # (ck_movies_source_fields) buzilishining oldini shu yerda olamiz.
+        movie = await MovieService(session).get_any_by_id(movie_id)
+        if movie is None or movie.source_type != "link":
+            return
 
     await state.update_data(movie_id=movie_id, field=field)
     await state.set_state(EditMovie.waiting_value)
@@ -91,6 +105,11 @@ async def got_new_value(
         value: object = int(raw)
     elif field == "genre":
         value = raw[:100] or None
+    elif field == "url":
+        if not raw or len(raw) > _MAX_URL_LEN or not looks_like_url(raw):
+            await message.answer(t("add_link_url_invalid", lang))
+            return
+        value = raw
     else:  # title
         if not raw:
             await message.answer(t("edit_ask_new_value", lang))

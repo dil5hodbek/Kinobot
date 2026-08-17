@@ -70,13 +70,16 @@ async def handle_text_search(
 
     service = MovieService(session)
 
-    # 1) Faqat raqam bo'lsa — kod bo'yicha aniq qidiruv
+    # 1) Kod bo'yicha aniq qidiruv (kod raqam yoki matn bo'lishi mumkin —
+    # admin har qanday kod kiritishi mumkin, shuning uchun formatidan
+    # qat'i nazar avval aniq moslikni tekshiramiz).
+    movie = await service.find_by_code(query)
+    if movie is not None:
+        await _deliver_or_warn(message, service, movie, user, lang)
+        return
     if _CODE_RE.match(query):
-        movie = await service.find_by_code(query)
-        if movie is not None:
-            await _deliver_or_warn(message, service, movie, user, lang)
-            return
-        # kod topilmasa — matnli qidiruvga o'tmaymiz, chunki bu aniq kod
+        # Sof raqam aniq kod urinishi edi — topilmasa matnli/janr
+        # qidiruvga o'tmaymiz (raqam kino nomiga tasodifiy mos kelmasin).
         await message.answer(t("not_found", lang))
         return
 
