@@ -96,6 +96,28 @@ class MovieRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_genres(self) -> list[str]:
+        """Faol kinolarda ishlatilgan barcha noyob janrlar (janr bo'yicha guruhlash uchun)."""
+        result = await self._session.execute(
+            select(func.distinct(Movie.genre))
+            .where(Movie.is_active.is_(True), Movie.genre.is_not(None))
+            .order_by(Movie.genre.asc())
+        )
+        return [row[0] for row in result.all()]
+
+    async def get_by_genre(self, genre: str, limit: int = 30) -> list[Movie]:
+        """Shu janrdagi faol kinolar (case-insensitive aniq moslik, eng ko'p ko'rilgani birinchi)."""
+        result = await self._session.execute(
+            select(Movie)
+            .where(
+                Movie.is_active.is_(True),
+                func.lower(Movie.genre) == genre.strip().lower(),
+            )
+            .order_by(Movie.views_count.desc(), Movie.title_uz.asc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     async def get_trending(self, limit: int) -> list[Movie]:
         result = await self._session.execute(
             select(Movie)
@@ -121,18 +143,31 @@ class MovieRepository:
     async def create(
         self,
         code: str,
-        channel_id: int,
-        message_id: int,
         title_uz: str,
         title_ru: str | None,
         title_en: str | None,
         year: int | None,
         genre: str | None,
+        *,
+        source_type: str = "channel",
+        channel_id: int | None = None,
+        message_id: int | None = None,
+        external_url: str | None = None,
     ) -> Movie:
+        """
+        Kino yaratadi. `source_type` ga qarab ikki xil kombinatsiya:
+          • "channel" — channel_id + message_id SHART (copy_message uchun).
+          • "link"    — external_url SHART (tashqi havola tugmasi uchun).
+        Noto'g'ri kombinatsiya CHECK constraint (ck_movies_source_fields)
+        bilan bazaning o'zida rad etiladi — bu yerda qo'shimcha tekshiruv
+        shart emas (yagona haqiqat manbai bazada).
+        """
         movie = Movie(
             code=code,
+            source_type=source_type,
             channel_id=channel_id,
             message_id=message_id,
+            external_url=external_url,
             title_uz=title_uz,
             title_ru=title_ru,
             title_en=title_en,

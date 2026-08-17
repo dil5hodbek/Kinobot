@@ -15,6 +15,19 @@ class AddMovie(StatesGroup):
     waiting_confirm = State()
 
 
+class AddLinkMovie(StatesGroup):
+    """AddMovie bilan bir xil oqim — faqat 1-qadam forward o'rniga URL."""
+
+    waiting_url = State()
+    waiting_code = State()
+    waiting_title_uz = State()
+    waiting_title_ru = State()
+    waiting_title_en = State()
+    waiting_year = State()
+    waiting_genre = State()
+    waiting_confirm = State()
+
+
 class Broadcast(StatesGroup):
     waiting_message = State()
     waiting_confirm = State()

@@ -60,10 +60,15 @@ POSTGRES_PORT=5432
 POSTGRES_DB=kinobot
 POSTGRES_USER=kinobot
 POSTGRES_PASSWORD=change_me_strong_password
+# Connection pool (bo'lim 14 — ko'p auditoriyada standart qiymatlar kam)
+DB_POOL_SIZE=20
+DB_MAX_OVERFLOW=20
+DB_POOL_RECYCLE_SEC=1800
 
 # === REDIS ===
 REDIS_HOST=redis
 REDIS_PORT=6379
+REDIS_MAX_CONNECTIONS=50
 
 # === APP ===
 DEFAULT_LANGUAGE=uz
@@ -96,8 +101,10 @@ CREATE INDEX ix_users_telegram_id ON users (telegram_id);
 CREATE TABLE movies (
     id BIGSERIAL PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,                  -- '777'
-    channel_id BIGINT NOT NULL,                        -- yopiq kanal ID
-    message_id BIGINT NOT NULL,                        -- kanaldagi xabar ID
+    source_type VARCHAR(10) NOT NULL DEFAULT 'channel', -- 'channel' | 'link'
+    channel_id BIGINT,                                 -- source_type='channel' uchun SHART
+    message_id BIGINT,                                 -- source_type='channel' uchun SHART
+    external_url VARCHAR(500),                         -- source_type='link' uchun SHART
     title_uz VARCHAR(255) NOT NULL,
     title_ru VARCHAR(255),
     title_en VARCHAR(255),
@@ -109,10 +116,16 @@ CREATE TABLE movies (
 );
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX ix_movies_code ON movies (code);
+CREATE INDEX ix_movies_genre ON movies (genre);        -- janr bo'yicha guruhlash (bo'lim 5.6)
 CREATE INDEX ix_movies_views ON movies (views_count DESC) WHERE is_active;
-CREATE INDEX ix_movies_title_uz_trgm ON movies USING gin (title_uz gin_trgm_ops);
-CREATE INDEX ix_movies_title_ru_trgm ON movies USING gin (title_ru gin_trgm_ops);
-CREATE INDEX ix_movies_title_en_trgm ON movies USING gin (title_en gin_trgm_ops);
+CREATE INDEX ix_movies_title_uz_trgm ON movies USING gin (lower(title_uz) gin_trgm_ops);
+CREATE INDEX ix_movies_title_ru_trgm ON movies USING gin (lower(coalesce(title_ru, '')) gin_trgm_ops);
+CREATE INDEX ix_movies_title_en_trgm ON movies USING gin (lower(coalesce(title_en, '')) gin_trgm_ops);
+-- Manba turiga qarab majburiy maydonlarni bazaning o'zi kafolatlaydi:
+ALTER TABLE movies ADD CONSTRAINT ck_movies_source_fields CHECK (
+    (source_type = 'channel' AND channel_id IS NOT NULL AND message_id IS NOT NULL AND external_url IS NULL)
+    OR (source_type = 'link' AND external_url IS NOT NULL)
+);
 
 -- Ko'rishlar tarixi (statistika uchun)
 CREATE TABLE movie_views (
@@ -208,11 +221,18 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
 ### 5.5. Qidiruv natijalari
 
 - **Faqat raqam** (`^\d{1,10}$`) → kod bo'yicha aniq qidiruv → topilsa darhol video.
+- **Janr nomiga ANIQ mos kelsa** (masalan "romance") → shu janrdagi kinolar ro'yxati (bo'lim 5.6). Fuzzy nom qidiruvidan OLDIN tekshiriladi.
 - **Matn** → pg_trgm fuzzy search (case-insensitive, imlo xatolariga chidamli):
   - 1 ta natija → darhol video + caption (nomi, yili, kodi).
   - 2+ natija → inline ro'yxat (max 10), tanlagach video.
   - 0 natija → "❌ Topilmadi. Kodni tekshiring yoki boshqa nom yozing."
-- Video **`copy_message`** bilan yuboriladi (forward EMAS — kanal manbasi ko'rinmasin, "protect_content=True" opsiyasi admin sozlamasiga qarab).
+- Yuborish **manba turiga** qarab (bo'lim 6.1-bis):
+  - `source_type='channel'` → **`copy_message`** (forward EMAS — kanal manbasi ko'rinmasin, `protect_content` admin sozlamasiga qarab). Xato bo'lsa (manba o'chirilgan) — kino **faolsizlantiriladi**, adminга xabar.
+  - `source_type='link'` → **inline havola tugmasi** ("🎬 Filmni ko'rish", tashqi URL). Yuborishda xato bo'lsa (masalan foydalanuvchi botni bloklagan) — bu YETKAZISH muammosi, kino faolsizlantirilMAYDI (havolaning o'zi buzuq degani emas).
+
+### 5.6. Janr bo'yicha guruhlash
+
+Foydalanuvchi mavjud janr nomini (masalan "romance", "drama") aniq (case-insensitive) yozsa — bot shu janrdagi barcha faol kinolarni ro'yxat qilib beradi (inline tugmalar, ko'p ko'rilgani birinchi, limit 30). Kod diapazoni (masalan "1-100 = romance") ISHLATILMAYDI — bu yangi kino qo'shilganda tartibni buzardi; buning o'rniga bazadagi `genre` ustuni bo'yicha to'g'ridan-to'g'ri filtrlanadi (`ix_movies_genre` indeksi bilan). Moslik topilmasa — oddiy fuzzy nom qidiruviga o'tiladi (o'lik oxir emas).
 
 ---
 
@@ -220,30 +240,77 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
 
 Kirish: `telegram_id in ADMIN_IDS`. `/admin` komandasi yoki admin uchun alohida reply keyboard.
 
+Menyu **2 QAVATLI** (HUB + submenu) — 8+ tugmani bitta ekranga tiqishtirish
+o'rniga, bo'lim tanlanadi, so'ng aniq amal:
+
 ```
+HUB:
 ┌──────────────────┬──────────────────┐
-│  ➕ Kino qo'shish │  📝 Tahrirlash   │
+│  🎬 Kinolar      │  📊 Boshqaruv    │
 ├──────────────────┼──────────────────┤
-│  📊 Statistika   │  📣 Xabar yuborish│
-├──────────────────┼──────────────────┤
-│  📢 Kanal qo'shish│  🔙 Chiqish      │
+│  👤 Oddiy menyu  │  🔙 Chiqish      │
+└──────────────────┴──────────────────┘
+
+"🎬 Kinolar" →                    "📊 Boshqaruv" →
+┌──────────────────┬──────────────────┐  ┌──────────────────┬──────────────────┐
+│  ➕ Kino qo'shish │  🔗 Link qo'shish│  │  📊 Statistika   │  📣 Xabar yuborish│
+├──────────────────┼──────────────────┤  ├──────────────────┼──────────────────┤
+│  📝 Tahrirlash   │  🗑 O'chirish    │  │  📢 Kanal qo'shish│  🔙 Orqaga       │
+├──────────────────┼──────────────────┤  └──────────────────┴──────────────────┘
+│  📋 Kodlar       │  🔙 Orqaga       │
 └──────────────────┴──────────────────┘
 ```
 
-### 6.1. Kino qo'shish oqimi (FSM — aiogram states)
+"👤 Oddiy menyu" — admin oddiy foydalanuvchi ko'radigan menyuni ko'radi
+(holat/huquq o'zgarmaydi, `/admin` bilan istalgan payt qaytiladi) —
+"🔙 Chiqish"dan farqli, bu faqat ko'rish uchun, FSM holatini ham tozalamaydi.
+
+### 6.1. Kino qo'shish oqimi — KANALDAN (FSM — aiogram states)
 
 ```
 1. Admin yopiq kanalga video tashlaydi
 2. Kanaldagi xabarni botga FORWARD qiladi
    → bot message_id + channel_id ni avtomatik oladi
+   → faqat sozlangan STORAGE_CHANNEL_ID dan forward qabul qilinadi
 3. Bot so'raydi: Kod? (yoki "auto" — keyingi bo'sh raqam)
 4. Nomi (uz)? → Nomi (ru)? (skip mumkin) → Nomi (en)? (skip)
 5. Yili? (skip) → Janri? (skip)
 6. Tasdiqlash kartochkasi → [✅ Saqlash] [❌ Bekor]
 ```
 
-- Kod unique constraint bilan himoyalangan; to'qnashuvda xato ko'rsatiladi.
+- Kod unique constraint bilan himoyalangan; to'qnashuvda xato ko'rsatiladi
+  (shu jumladan bir nechta post bir vaqtda kelib RACE bo'lsa ham — bazaning
+  CHECK/UNIQUE constraint'i + `IntegrityError` ushlanadi).
 - FSM holatlari Redis'da saqlanadi.
+- Kanaldan **avtomatik** qo'shish ham bor (`channel_intake.py`): admin
+  kanalga to'g'ridan caption bilan (`#kod\nNom: ...\nJanr: ...`) tashlasa,
+  bot forward'siz o'zi o'qib qo'shadi.
+
+### 6.1-bis. Kino qo'shish oqimi — LINK ORQALI (FSM)
+
+Admin kino faylini yuklab kanalga joylashtirish o'rniga, boshqa saytdagi
+kino havolasini (URL) bersa ham bo'ladi — bot uni **video sifatida
+ko'chirmaydi**, faqat inline tugma ("🎬 Filmni ko'rish") bilan havolaga
+yo'naltiradi.
+
+```
+1. Admin "🔗 Link qo'shish" tugmasini bosadi
+2. Bot so'raydi: Kino havolasi (URL)? (https:// bilan boshlanishi shart)
+3. Bot so'raydi: Kod? (yoki "auto")
+4. Nomi (uz)? → Nomi (ru)? (skip) → Nomi (en)? (skip)
+5. Yili? (skip) → Janri? (skip)
+6. Tasdiqlash kartochkasi → [✅ Saqlash] [❌ Bekor]
+```
+
+- Qolgan qadamlar (kod/nom/yil/janr) kanaldan qo'shish bilan **bir xil**
+  — faqat 1-qadam va yuborish mexanizmi farq qiladi.
+- `movies.source_type='link'`, `external_url` majburiy (`channel_id`/
+  `message_id` esa NULL qoladi — CHECK constraint bazaning o'zida
+  noto'g'ri kombinatsiyani rad etadi, bo'lim 4).
+- Havola ishlamay qolsa (foydalanuvchi shikoyat qilsa) — kino **avtomatik
+  faolsizlantirilMAYDI** (bo'lim 5.5) — admin qo'lda tahrirlashi kerak,
+  chunki bot havolaning o'zi buzuqmi yoki foydalanuvchi tomonида muammo
+  ekanini ajrata olmaydi.
 
 ### 6.2. Statistika
 
@@ -328,9 +395,11 @@ kinobot/
     │   └── channel_repository.py
     ├── services/
     │   ├── user_service.py
-    │   ├── movie_service.py
+    │   ├── movie_service.py        # deliver(): manba turiga qarab tarmoqlanadi
     │   ├── subscription_service.py
-    │   └── broadcast_service.py
+    │   ├── broadcast_service.py
+    │   ├── stats_service.py        # statistika yig'ish + matn shakllantirish
+    │   └── channel_service.py      # kanal CRUD + bot-admin tekshiruvi
     ├── middlewares/
     │   ├── db_session.py         # har update'ga session ochish/yopish
     │   ├── user_context.py       # user + lang inject
@@ -347,12 +416,15 @@ kinobot/
     │   ├── trend.py
     │   ├── channels.py
     │   └── admin/
-    │       ├── panel.py
-    │       ├── add_movie.py      # FSM
+    │       ├── panel.py           # kirish/chiqish + 2 qavatli menyu navigatsiyasi
+    │       ├── add_movie.py       # FSM — kanaldan (forward)
+    │       ├── add_link_movie.py  # FSM — link orqali (bo'lim 6.1-bis)
     │       ├── edit_movie.py
+    │       ├── delete_movie.py
     │       ├── stats.py
     │       ├── broadcast.py
-    │       └── channels.py
+    │       ├── channels.py
+    │       └── codes.py           # Excel eksport
     ├── states/
     │   └── admin_states.py       # FSM StatesGroup
     └── utils/
@@ -455,9 +527,17 @@ Dockerfile: `python:3.12-slim`, multi-stage kerak emas (bot yengil), lekin `pip 
 
 **Bosqich 4 — Polish (v2, ixtiyoriy):**
 - [ ] Dead-link tekshiruv cron
-- [ ] Janr/yil bo'yicha filtr
+- [x] Janr bo'yicha filtr (bo'lim 5.6)
+- [ ] Yil bo'yicha filtr
 - [ ] Referal tizim
-- [ ] Webhook rejimi (hozir polling yetarli)
+- [ ] Webhook rejimi (bo'lim 14 — hozircha polling yetarli, kerak bo'lganda)
+
+**Bosqich 5 — Katta auditoriya + link kinolar:**
+- [x] Link orqali kino qo'shish (bo'lim 6.1-bis) — video yuklamasdan, tashqi havola
+- [x] Janr bo'yicha guruhlash (bo'lim 5.6)
+- [x] Admin menyu 2 qavatli (HUB + submenu, bo'lim 6)
+- [x] DB/Redis connection pool sozlandi (bo'lim 14)
+- [ ] Webhook rejimi, Postgres read-replica — hozircha kerak emas (bo'lim 14)
 
 ---
 
@@ -473,3 +553,45 @@ Dockerfile: `python:3.12-slim`, multi-stage kerak emas (bot yengil), lekin `pip 
 8. Alembic bilan initial migratsiya (pg_trgm extension shu yerda yaratiladi).
 9. README.md: o'rnatish, .env to'ldirish, `docker compose up -d`, admin qo'shish yo'riqnomasi.
 10. Ishga tushirish testi: `docker compose up` → bot polling boshlaydi → /start ishlaydi.
+
+---
+
+## 14. KENGAYISH (SCALING) — HOZIR VA KEYINGI BOSQICH
+
+Katta auditoriya (o'n minglab+ foydalanuvchi) rejalashtirilganда, lekin
+hozircha real yuk kam bo'lsa, tamoyil: **poydevorni hozir tayyorla,
+murakkab infratuzilmani haqiqiy ehtiyoj chiqqanда qur** (erta optimallash
+— behuda murakkablik).
+
+### 14.1. Hozir qilingan (poydevor)
+
+- **DB connection pool aniq sozlangan** — standart SQLAlchemy qiymatlari
+  (`pool_size=5, max_overflow=10`) kam auditoriyada navbat hosil qiladi.
+  `.env`: `DB_POOL_SIZE` (standart 20), `DB_MAX_OVERFLOW` (standart 20),
+  `DB_POOL_RECYCLE_SEC` (standart 1800 — uzoq turgan ulanish yangilanadi).
+- **Redis max_connections chegaralangan** — `.env`: `REDIS_MAX_CONNECTIONS`
+  (standart 50) — bitta jarayon Redis'ga cheksiz ulanish ochmasin.
+- **`genre` ustuniga indeks** — janr bo'yicha guruhlash (bo'lim 5.6) ko'p
+  auditoriyada ham sekinlashmasin (`ix_movies_genre`).
+
+### 14.2. Kerak bo'lganда qilinadigan (HOZIR emas)
+
+Quyidagilar ATAYLAB amalga oshirilmagan — ular haqiqiy o'lchov (real
+foydalanuvchi soni/sekinlashuv belgisi) ko'rsatganda qo'shiladi, oldindan
+emas:
+
+- **Webhook rejimi** (polling o'rniga) — polling minglab kunlik faol
+  foydalanuvchigacha yetarli. Webhook HTTPS endpoint + ASGI server talab
+  qiladi (qo'shimcha infratuzilma murakkabligi) — faqat юqori tezlik/kam
+  kechikish haqiqatan kerak bo'lganda.
+- **Postgres read-replica** — botlarda odatda birinchi tirbandlik DB emas
+  (pool/polling/Redis). Replica faqat **o'qish** yuki (masalan minglab
+  bir vaqtdagi qidiruv) haqiqiy muammo bo'lganда qo'shiladi.
+- **Horizontal masshtablash** (bir nechta bot jarayoni) — aiogram polling
+  bitta jarayonda yagona bo'lishi kerak (bir nechta jarayon bir xil
+  update'ni ikki marta olib ketishi mumkin); ko'p jarayon kerak bo'lsa
+  avval webhook rejimiga o'tish SHART.
+
+**Qachon qaytish kerak:** Redis/Postgres CPU/xotira monitoring qizil
+chiziqqa yetsa, yoki foydalanuvchilar javob sekinligidan shikoyat qilsa —
+shu bo'lim birinchi navbatda ko'rib chiqiladi.

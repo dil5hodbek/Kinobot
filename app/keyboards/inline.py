@@ -69,6 +69,26 @@ def trend_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def genre_movies_keyboard(movies: list[Movie], lang: str) -> InlineKeyboardMarkup:
+    """Janr bo'yicha topilgan kinolar — mavjud `movie:{id}` callback'ini ishlatadi."""
+    builder = InlineKeyboardBuilder()
+    for movie in movies:
+        title = movie_title(movie, lang)
+        builder.row(
+            InlineKeyboardButton(
+                text=f"🎬 {title} — {movie.code}", callback_data=f"movie:{movie.id}"
+            )
+        )
+    return builder.as_markup()
+
+
+def movie_link_keyboard(url: str, lang: str) -> InlineKeyboardMarkup:
+    """Link-manba kino uchun — video o'rniga havola tugmasi."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=t("btn_watch_movie", lang), url=url)
+    return builder.as_markup()
+
+
 # === ADMIN ===
 
 def add_movie_confirm_keyboard(lang: str) -> InlineKeyboardMarkup:
@@ -82,6 +102,17 @@ def add_movie_confirm_keyboard(lang: str) -> InlineKeyboardMarkup:
 def skip_keyboard(lang: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text=t("btn_skip", lang), callback_data="fsm_skip")
+    return builder.as_markup()
+
+
+def add_link_movie_confirm_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """add_movie_confirm_keyboard bilan bir xil ko'rinish, lekin alohida
+    callback nomi — link va kanal oqimlari FSM holati bilan ajralган bo'lsa
+    ham, o'qishda chalkashmasin uchun."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=t("btn_save", lang), callback_data="link_movie_save")
+    builder.button(text=t("btn_cancel", lang), callback_data="link_movie_cancel")
+    builder.adjust(2)
     return builder.as_markup()
 
 

@@ -9,6 +9,7 @@
   "search_prompt": "🔍 Kino kodi yoki nomini yozing:",
   "not_found": "❌ Hech narsa topilmadi. Kodni tekshiring yoki boshqa nom yozing.",
   "multiple_found": "🔎 Topilgan kinolar — birini tanlang:",
+  "genre_movies_title": "🎭 {genre} janridagi kinolar:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Kod: {code}\n👁 {views} marta ko'rilgan",
   "trend_title": "🔥 Eng mashhur kinolar:",
   "trend_empty": "🔥 Hozircha trend kinolar yo'q.",
@@ -26,6 +27,7 @@
   "admin_panel": "🛠 Admin panel:",
   "admin_only": "⛔ Bu bo'lim faqat adminlar uchun.",
   "btn_add_movie": "➕ Kino qo'shish",
+  "btn_add_link_movie": "🔗 Link qo'shish",
   "btn_edit_movie": "📝 Tahrirlash",
   "btn_stats": "📊 Statistika",
   "btn_broadcast": "📣 Xabar yuborish",
@@ -33,6 +35,10 @@
   "btn_codes": "📋 Kodlar",
   "btn_delete_movie": "🗑 O'chirish",
   "btn_exit": "🔙 Chiqish",
+  "btn_movies_menu": "🎬 Kinolar",
+  "btn_management_menu": "📊 Boshqaruv",
+  "btn_user_menu": "👤 Oddiy menyu",
+  "btn_back": "🔙 Orqaga",
   "delete_ask": "🗑 O'chirish uchun kino kodini yoki nomini yuboring:",
   "delete_not_found": "❌ Topilmadi. Kod yoki nomni tekshirib qayta yuboring.",
   "delete_pick": "🔎 Topildi — o'chirish uchun kinoni tanlang:",
@@ -77,6 +83,8 @@
   "add_movie_confirm": "🎬 Tasdiqlang:\n\nNomi: {title_uz}\nRU: {title_ru}\nEN: {title_en}\nYil: {year}\nJanr: {genre}\nKod: {code}",
   "add_movie_saved": "✅ Kino saqlandi! Kod: {code}",
   "add_movie_error": "❌ Saqlashda xatolik. Qayta urinib ko'ring.",
+  "add_link_ask_url": "1️⃣ Kino havolasini (URL) yuboring:",
+  "add_link_url_invalid": "⚠️ Bu to'g'ri havola (URL) emas. https:// bilan boshlanadigan link yuboring:",
   "intake_added": "✅ Kanaldan avto qo'shildi\n🔢 Kod: {code}\n🎬 {title}\n🎭 {genre} | 📅 {year}",
   "intake_duplicate": "⚠️ Kod band: {code} — kino qo'shilmadi.\nBoshqa kod bilan qayta joylang yoki `#auto` yozing.",
   "intake_bad_format": "⚠️ Format xato — kino qo'shilmadi.\nNamuna:\n#1\nNom: Robotar\nJanr: drama",
@@ -106,5 +114,6 @@
   "edit_ask_new_value": "Yangi qiymatni kiriting:",
   "edit_saved": "✅ Saqlandi.",
   "edit_deleted": "🗑 Kino o'chirildi (faolsizlantirildi).",
-  "views_label": "👁"
+  "views_label": "👁",
+  "btn_watch_movie": "🎬 Filmni ko'rish"
 }

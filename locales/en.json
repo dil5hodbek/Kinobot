@@ -9,6 +9,7 @@
   "search_prompt": "🔍 Type a movie code or title:",
   "not_found": "❌ Nothing found. Check the code or try another title.",
   "multiple_found": "🔎 Movies found — pick one:",
+  "genre_movies_title": "🎭 Movies in the {genre} genre:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Code: {code}\n👁 {views} views",
   "trend_title": "🔥 Most popular movies:",
   "trend_empty": "🔥 No trending movies yet.",
@@ -26,6 +27,7 @@
   "admin_panel": "🛠 Admin panel:",
   "admin_only": "⛔ This section is for admins only.",
   "btn_add_movie": "➕ Add movie",
+  "btn_add_link_movie": "🔗 Add via link",
   "btn_edit_movie": "📝 Edit",
   "btn_stats": "📊 Statistics",
   "btn_broadcast": "📣 Broadcast",
@@ -33,6 +35,10 @@
   "btn_codes": "📋 Codes",
   "btn_delete_movie": "🗑 Delete",
   "btn_exit": "🔙 Exit",
+  "btn_movies_menu": "🎬 Movies",
+  "btn_management_menu": "📊 Management",
+  "btn_user_menu": "👤 Regular menu",
+  "btn_back": "🔙 Back",
   "delete_ask": "🗑 Send the movie code or title to delete:",
   "delete_not_found": "❌ Not found. Check the code or title and send again.",
   "delete_pick": "🔎 Found — pick a movie to delete:",
@@ -77,6 +83,8 @@
   "add_movie_confirm": "🎬 Confirm:\n\nTitle: {title_uz}\nRU: {title_ru}\nEN: {title_en}\nYear: {year}\nGenre: {genre}\nCode: {code}",
   "add_movie_saved": "✅ Movie saved! Code: {code}",
   "add_movie_error": "❌ Save failed. Please try again.",
+  "add_link_ask_url": "1️⃣ Send the movie link (URL):",
+  "add_link_url_invalid": "⚠️ That doesn't look like a URL. Send a link starting with https://:",
   "intake_added": "✅ Auto-added from channel\n🔢 Code: {code}\n🎬 {title}\n🎭 {genre} | 📅 {year}",
   "intake_duplicate": "⚠️ Code taken: {code} — movie not added.\nRe-post with another code or write `#auto`.",
   "intake_bad_format": "⚠️ Wrong format — movie not added.\nExample:\n#1\nNom: Robotar\nJanr: drama",
@@ -106,5 +114,6 @@
   "edit_ask_new_value": "Enter the new value:",
   "edit_saved": "✅ Saved.",
   "edit_deleted": "🗑 Movie deleted (deactivated).",
-  "views_label": "👁"
+  "views_label": "👁",
+  "btn_watch_movie": "🎬 Watch the movie"
 }

@@ -54,7 +54,11 @@ def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
 async def main() -> None:
     load_translations()
 
-    redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    redis = Redis.from_url(
+        settings.redis_url,
+        decode_responses=True,
+        max_connections=settings.redis_max_connections,
+    )
     storage = await _make_storage(redis)
 
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties())

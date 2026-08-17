@@ -42,9 +42,22 @@ class Settings(BaseSettings):
     postgres_user: str = Field("kinobot", alias="POSTGRES_USER")
     postgres_password: str = Field(..., alias="POSTGRES_PASSWORD")
 
+    # === DATABASE (pool) ===
+    # Standart SQLAlchemy qiymatlari (pool_size=5, max_overflow=10) kam
+    # auditoriyali botga yetadi, lekin ko'p bir vaqtdagi foydalanuvchida
+    # navbat hosil qiladi. Aniq sozlab, .env orqali kerak bo'lsa oshirish
+    # mumkin qilamiz.
+    db_pool_size: int = Field(20, alias="DB_POOL_SIZE")
+    db_max_overflow: int = Field(20, alias="DB_MAX_OVERFLOW")
+    # Uzoq turgan ulanishni davriy yangilaydi (masalan Postgres/tarmoq
+    # oraliqda qayta ishga tushsa, "eskirgan" ulanishda osilib qolmaslik).
+    db_pool_recycle_sec: int = Field(1800, alias="DB_POOL_RECYCLE_SEC")
+
     # === REDIS ===
     redis_host: str = Field("redis", alias="REDIS_HOST")
     redis_port: int = Field(6379, alias="REDIS_PORT")
+    # Bitta jarayonda Redis'ga bir vaqtda ochiq ulanishlar chegarasi.
+    redis_max_connections: int = Field(50, alias="REDIS_MAX_CONNECTIONS")
 
     # === APP ===
     default_language: str = Field("uz", alias="DEFAULT_LANGUAGE")

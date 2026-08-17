@@ -123,8 +123,13 @@ async def got_genre(message: Message, lang: str, state: FSMContext) -> None:
     await _show_confirm(message, lang, state)
 
 
-@router.callback_query(F.data == "fsm_skip")
+@router.callback_query(StateFilter(AddMovie), F.data == "fsm_skip")
 async def skip_field(callback: CallbackQuery, lang: str, state: FSMContext) -> None:
+    # StateFilter(AddMovie) — shu guruhning ISTALGAN holatiga mos keladi.
+    # SHART: add_link_movie.py ham "fsm_skip" ishlatadi — bu cheklov
+    # bo'lmasa, qaysi router birinchi ro'yxatdan o'tgan bo'lsa o'sha HAR
+    # IKKI oqim uchun callback'ni "yutib" olardi (holat mos kelmasa ham),
+    # ikkinchi oqimda "O'tkazib yuborish" tugmasi jim ishlamay qolardi.
     await callback.answer()
     current = await state.get_state()
     message = callback.message

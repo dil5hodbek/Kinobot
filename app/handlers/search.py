@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.keyboards.inline import search_results_keyboard
+from app.keyboards.inline import genre_movies_keyboard, search_results_keyboard
 from app.models.user import User
 from app.services.movie_service import MovieDeliveryError, MovieService
 from app.utils.filters import ButtonText
@@ -80,7 +80,22 @@ async def handle_text_search(
         await message.answer(t("not_found", lang))
         return
 
-    # 2) Matn bo'yicha fuzzy qidiruv
+    # 2) Janr nomiga ANIQ mos kelsa (masalan "romance") — shu janrdagi
+    # kinolar ro'yxati. Fuzzy nom qidiruvdan OLDIN tekshiriladi: janr
+    # nomlari kichik, barqaror to'plam (kino nomi bilan chalkashish
+    # ehtimoli past), aniq moslik esa foydalanuvchi kutgan natijani
+    # kafolatlaydi (fuzzy bo'lsa noaniq/tasodifiy janr tanlanishi mumkin edi).
+    genre = await service.match_genre(query)
+    if genre is not None:
+        movies = await service.movies_by_genre(genre)
+        if movies:
+            await message.answer(
+                t("genre_movies_title", lang, genre=genre),
+                reply_markup=genre_movies_keyboard(movies, lang),
+            )
+            return
+
+    # 3) Matn bo'yicha fuzzy qidiruv
     movies = await service.search(query)
     if not movies:
         await message.answer(t("not_found", lang))

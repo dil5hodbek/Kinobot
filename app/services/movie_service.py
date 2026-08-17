@@ -12,6 +12,7 @@ from aiogram.exceptions import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.keyboards.inline import movie_link_keyboard
 from app.models.movie import Movie
 from app.repositories.movie_repository import MovieRepository
 from app.utils.format import movie_title
@@ -86,9 +87,27 @@ class MovieService:
     async def deliver(
         self, bot: Bot, movie: Movie, user_db_id: int, chat_id: int, lang: str
     ) -> None:
-        """copy_message orqali videoni yuboradi, ko'rishni hisoblaydi.
+        """Kinoni yuboradi (manba turiga qarab), ko'rishni hisoblaydi.
 
-        Xato bo'lsa MovieDeliveryError ko'taradi va kinoni faolsizlantiradi.
+        Xato bo'lsa MovieDeliveryError ko'taradi.
+        """
+        if movie.source_type == "link":
+            await self._deliver_link(bot, movie, chat_id, lang)
+        else:
+            await self._deliver_channel(bot, movie, chat_id, lang)
+
+        # Ko'rish muvaffaqiyatli — statistika
+        await self._repo.increment_views(movie.id)
+        await self._repo.add_view(user_db_id, movie.id)
+
+    async def _deliver_channel(
+        self, bot: Bot, movie: Movie, chat_id: int, lang: str
+    ) -> None:
+        """copy_message orqali kanaldagi videoni yuboradi.
+
+        Xato — manba post o'chirilgan yoki bot huquqi yo'qolgan degani
+        (doimiy muammo, keyingi HAR BIR foydalanuvchida ham takrorlanadi) —
+        shuning uchun kino FAOLSIZLANTIRILADI va adminlarga xabar beriladi.
         """
         try:
             await bot.copy_message(
@@ -106,9 +125,27 @@ class MovieService:
             await self._notify_admins_dead_link(bot, movie, exc)
             raise MovieDeliveryError(str(exc)) from exc
 
-        # Ko'rish muvaffaqiyatli — statistika
-        await self._repo.increment_views(movie.id)
-        await self._repo.add_view(user_db_id, movie.id)
+    async def _deliver_link(
+        self, bot: Bot, movie: Movie, chat_id: int, lang: str
+    ) -> None:
+        """Tashqi havolani tugma bilan yuboradi (video ko'chirilmaydi).
+
+        Xato bo'lsa (masalan foydalanuvchi botni bloklagan) MUAMMO
+        FOYDALANUVCHIDA, havolada emas — shuning uchun kino FAOLSIZLANTIRILMAYDI
+        (_deliver_channel'dan farqli, bu yerda "manba o'chirilgan" degan
+        signal umuman yo'q — Telegram xatosi faqat yetkazishga tegishli).
+        """
+        try:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=self.caption_for(movie, lang),
+                reply_markup=movie_link_keyboard(movie.external_url, lang),
+            )
+        except (TelegramBadRequest, TelegramForbiddenError) as exc:
+            logger.warning(
+                "Link kino yuborib bo'lmadi (movie_id=%s): %s", movie.id, exc
+            )
+            raise MovieDeliveryError(str(exc)) from exc
 
     @staticmethod
     async def _notify_admins_dead_link(
@@ -134,16 +171,18 @@ class MovieService:
         self,
         *,
         code: str,
-        channel_id: int,
-        message_id: int,
         title_uz: str,
         title_ru: str | None,
         title_en: str | None,
         year: int | None,
         genre: str | None,
+        channel_id: int | None = None,
+        message_id: int | None = None,
     ) -> Movie:
+        """Kanaldan kino qo'shadi (source_type='channel', standart)."""
         return await self._repo.create(
             code=code,
+            source_type="channel",
             channel_id=channel_id,
             message_id=message_id,
             title_uz=title_uz,
@@ -152,6 +191,48 @@ class MovieService:
             year=year,
             genre=genre,
         )
+
+    async def add_link_movie(
+        self,
+        *,
+        code: str,
+        external_url: str,
+        title_uz: str,
+        title_ru: str | None,
+        title_en: str | None,
+        year: int | None,
+        genre: str | None,
+    ) -> Movie:
+        """Tashqi havola orqali kino qo'shadi (source_type='link')."""
+        return await self._repo.create(
+            code=code,
+            source_type="link",
+            external_url=external_url,
+            title_uz=title_uz,
+            title_ru=title_ru,
+            title_en=title_en,
+            year=year,
+            genre=genre,
+        )
+
+    async def match_genre(self, query: str) -> str | None:
+        """Kiritilgan matn mavjud janrlardan biriga ANIQ mos keladimi?
+
+        Case-insensitive aniq moslik (masalan "romance" == "Romance").
+        Moslik topilmasa None — chaqiruvchi (search.py) oddiy nom qidiruvга
+        o'tadi. Bu haydovchi/foydalanuvchi so'zlarini kino nomi bilan
+        chalkashtirmaslik uchun ATAYLAB "aniq" (fuzzy emas).
+        """
+        q = query.strip().lower()
+        if not q:
+            return None
+        for genre in await self._repo.list_genres():
+            if genre.strip().lower() == q:
+                return genre
+        return None
+
+    async def movies_by_genre(self, genre: str) -> list[Movie]:
+        return await self._repo.get_by_genre(genre)
 
     async def code_exists(self, code: str) -> bool:
         return await self._repo.get_by_code_any(code) is not None

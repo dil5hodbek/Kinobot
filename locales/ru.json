@@ -9,6 +9,7 @@
   "search_prompt": "🔍 Введите код или название фильма:",
   "not_found": "❌ Ничего не найдено. Проверьте код или введите другое название.",
   "multiple_found": "🔎 Найденные фильмы — выберите один:",
+  "genre_movies_title": "🎭 Фильмы в жанре {genre}:",
   "movie_caption": "🎬 {title}\n📅 {year} | 🎭 {genre}\n🔢 Код: {code}\n👁 просмотров: {views}",
   "trend_title": "🔥 Самые популярные фильмы:",
   "trend_empty": "🔥 Пока нет популярных фильмов.",
@@ -26,6 +27,7 @@
   "admin_panel": "🛠 Админ-панель:",
   "admin_only": "⛔ Раздел только для админов.",
   "btn_add_movie": "➕ Добавить фильм",
+  "btn_add_link_movie": "🔗 Добавить по ссылке",
   "btn_edit_movie": "📝 Редактировать",
   "btn_stats": "📊 Статистика",
   "btn_broadcast": "📣 Рассылка",
@@ -33,6 +35,10 @@
   "btn_codes": "📋 Коды",
   "btn_delete_movie": "🗑 Удалить",
   "btn_exit": "🔙 Выход",
+  "btn_movies_menu": "🎬 Фильмы",
+  "btn_management_menu": "📊 Управление",
+  "btn_user_menu": "👤 Обычное меню",
+  "btn_back": "🔙 Назад",
   "delete_ask": "🗑 Отправьте код или название фильма для удаления:",
   "delete_not_found": "❌ Не найдено. Проверьте код или название и отправьте снова.",
   "delete_pick": "🔎 Найдено — выберите фильм для удаления:",
@@ -77,6 +83,8 @@
   "add_movie_confirm": "🎬 Подтвердите:\n\nНазвание: {title_uz}\nRU: {title_ru}\nEN: {title_en}\nГод: {year}\nЖанр: {genre}\nКод: {code}",
   "add_movie_saved": "✅ Фильм сохранён! Код: {code}",
   "add_movie_error": "❌ Ошибка сохранения. Попробуйте снова.",
+  "add_link_ask_url": "1️⃣ Отправьте ссылку (URL) на фильм:",
+  "add_link_url_invalid": "⚠️ Это не похоже на ссылку. Отправьте ссылку, начинающуюся с https://:",
   "intake_added": "✅ Добавлено из канала\n🔢 Код: {code}\n🎬 {title}\n🎭 {genre} | 📅 {year}",
   "intake_duplicate": "⚠️ Код занят: {code} — фильм не добавлен.\nОпубликуйте с другим кодом или напишите `#auto`.",
   "intake_bad_format": "⚠️ Неверный формат — фильм не добавлен.\nПример:\n#1\nNom: Robotar\nJanr: drama",
@@ -106,5 +114,6 @@
   "edit_ask_new_value": "Введите новое значение:",
   "edit_saved": "✅ Сохранено.",
   "edit_deleted": "🗑 Фильм удалён (деактивирован).",
-  "views_label": "👁"
+  "views_label": "👁",
+  "btn_watch_movie": "🎬 Смотреть фильм"
 }
