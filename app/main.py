@@ -14,6 +14,7 @@ from redis.asyncio import Redis
 from app.config import settings
 from app.database import session_factory
 from app.handlers import build_router
+from app.middlewares.admin_menu_interrupt import AdminMenuInterruptMiddleware
 from app.middlewares.db_session import DbSessionMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.subscription import SubscriptionMiddleware
@@ -49,6 +50,10 @@ def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
         observer.middleware(UserContextMiddleware())
         observer.middleware(RateLimitMiddleware(redis))
         observer.middleware(SubscriptionMiddleware(redis))
+
+    # Admin menyu tugmasi bosilsa — eski FSM oqimi matnni "yutib olmasin"
+    # (faqat message'lar: reply-klaviatura tugmalari shu orqali keladi).
+    dp.message.middleware(AdminMenuInterruptMiddleware())
 
 
 async def main() -> None:
