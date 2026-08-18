@@ -1,6 +1,11 @@
+# Compose PROJEKT nomi qat'iy belgilangan (papka nomidan mustaqil) — shu
+# nom orqali volume'lar (kino-bot_pg_data, kino-bot_redis_data) doim TO'G'RI
+# topiladi, papka qayta klonlansa/ko'chirilsa ham ma'lumot yo'qolmaydi.
+name: kino-bot
+
 services:
   bot:
-    container_name: kino-bot
+    container_name: Kinobot
     build: .
     restart: unless-stopped
     env_file: .env
