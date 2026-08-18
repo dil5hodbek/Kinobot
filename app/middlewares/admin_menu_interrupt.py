@@ -42,9 +42,16 @@ from aiogram.types import User as TgUser
 from app.config import settings
 from app.utils.i18n import all_labels
 
-# Admin reply-klaviaturasidagi BARCHA menyu/navigatsiya/oqim-boshlovchi
-# tugmalar — har biri bosilganda joriy oqim "yutib olmasligi" kerak.
+# BARCHA reply-klaviatura tugmalari (admin HAM, oddiy foydalanuvchi HAM) —
+# har biri bosilganda joriy oqim "yutib olmasligi" kerak. Admin "👤 Oddiy
+# menyu" orqali istalgan payt asosiy (foydalanuvchi) klaviaturaga o'tishi
+# mumkin bo'lgani uchun, u yerdagi tugmalar (Qidiruv/Kanallar/Trend/Til/
+# Tozalash) ham shu ro'yxatda bo'lishi SHART — aks holda admin biror
+# FSM oqimida (masalan "Trend kinolar qo'shish") turib "📢 Kanallar" bossa,
+# matn eski oqimga tushib "topilmadi" deb qaytadi (haqiqiy production bug —
+# ro'yxatda faqat btn_channels/btn_search/btn_trend/btn_language yo'q edi).
 _MENU_BUTTON_KEYS = (
+    # --- admin ---
     "btn_movies_menu",
     "btn_management_menu",
     "btn_back",
@@ -59,6 +66,11 @@ _MENU_BUTTON_KEYS = (
     "btn_broadcast",
     "btn_add_channel",
     "btn_trend_movies",
+    # --- oddiy foydalanuvchi (admin ham "Oddiy menyu"da shularni ko'radi) ---
+    "btn_search",
+    "btn_channels",
+    "btn_trend",
+    "btn_language",
     "btn_clear_chat",
 )
 

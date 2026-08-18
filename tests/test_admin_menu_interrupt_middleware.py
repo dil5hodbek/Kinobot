@@ -140,3 +140,27 @@ async def test_clear_chat_button_also_interrupts_admin_flows() -> None:
 
     assert state.clear_calls == 1
     assert data["raw_state"] is None
+
+
+@pytest.mark.asyncio
+async def test_regular_user_menu_buttons_also_interrupt_admin_flows() -> None:
+    """Reg-test: btn_search/btn_channels/btn_trend/btn_language avval
+    ro'yxatda yo'q edi — admin "👤 Oddiy menyu" orqali asosiy klaviaturaga
+    o'tib, "Trend kinolar qo'shish" kabi biror admin FSM oqimida turib
+    "📢 Kanallar" bossa, matn eski oqimga (masalan TrendMovies.waiting_
+    add_query) tushib "topilmadi" javobini olardi — bu productionda
+    kuzatilgan haqiqiy bug edi."""
+    middleware = AdminMenuInterruptMiddleware()
+    bot = make_bot()
+    admin_id = settings.admin_ids[0]
+
+    for key in ("btn_search", "btn_channels", "btn_trend", "btn_language"):
+        message = make_message(bot, admin_id, text=t(key, "uz"))
+        state = _FakeState("TrendMovies:waiting_add_query")
+        handler = AsyncMock(return_value="ok")
+
+        data = _data(message, state, "TrendMovies:waiting_add_query")
+        await middleware(handler, message, data)
+
+        assert state.clear_calls == 1, f"{key} FSM holatini tozalamadi"
+        assert data["raw_state"] is None, f"{key} raw_state'ni tozalamadi"
