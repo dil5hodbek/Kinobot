@@ -21,6 +21,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.base import BaseStorage
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.types import BotCommand
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from redis.asyncio import Redis
 
@@ -37,7 +38,7 @@ from app.middlewares.subscription import SubscriptionMiddleware
 from app.middlewares.user_context import UserContextMiddleware
 from app.observability.http_server import build_app, start_http_server
 from app.services.broadcast_service import shutdown_jobs, start_broadcast_worker
-from app.utils.i18n import load_translations
+from app.utils.i18n import SUPPORTED_LANGUAGES, load_translations, t
 
 logging.basicConfig(
     level=logging.INFO,
@@ -130,6 +131,27 @@ def _log_startup_info(username: str, bot_id: int) -> None:
         )
 
 
+async def _register_bot_commands(bot: Bot) -> None:
+    """Telegram'ning "/" buyruqlar menyusida /start va /help ko'rinsin.
+
+    Har bir til uchun alohida ro'yxatdan o'tkaziladi (language_code), shu
+    bilan birga standart (til ko'rsatilmagan) ro'yxat sifatida o'zbekcha
+    qo'yiladi — Telegram mos til topa olmasa shu ishlatiladi.
+    """
+    for lang in SUPPORTED_LANGUAGES:
+        commands = [
+            BotCommand(command="start", description=t("cmd_start_desc", lang)),
+            BotCommand(command="help", description=t("cmd_help_desc", lang)),
+        ]
+        await bot.set_my_commands(commands, language_code=lang)
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description=t("cmd_start_desc", "uz")),
+            BotCommand(command="help", description=t("cmd_help_desc", "uz")),
+        ]
+    )
+
+
 async def _run_polling(bot: Bot, dp: Dispatcher) -> None:
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
@@ -194,6 +216,7 @@ async def main() -> None:
     try:
         me = await bot.get_me()
         _log_startup_info(me.username or "?", me.id)
+        await _register_bot_commands(bot)
 
         if settings.bot_mode == "webhook":
             await _run_webhook(bot, dp, http_app)

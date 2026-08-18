@@ -176,6 +176,11 @@ class MovieService:
             views=movie.views_count,
         )
 
+    def _link_caption_for(self, movie: Movie, lang: str) -> str:
+        """Link-manba kino uchun — oddiy caption + VPN eslatmasi (ba'zi
+        tashqi havolalar mamlakat ichida to'sqinliksiz ochilmasligi mumkin)."""
+        return self.caption_for(movie, lang) + "\n\n" + t("link_movie_vpn_note", lang)
+
     async def deliver(
         self, bot: Bot, movie: Movie, user_db_id: int, chat_id: int, lang: str
     ) -> None:
@@ -266,7 +271,7 @@ class MovieService:
         try:
             await bot.send_message(
                 chat_id=chat_id,
-                text=self.caption_for(movie, lang),
+                text=self._link_caption_for(movie, lang),
                 reply_markup=movie_link_keyboard(movie.external_url, lang),
             )
         except TelegramRetryAfter as exc:
@@ -274,7 +279,7 @@ class MovieService:
             try:
                 await bot.send_message(
                     chat_id=chat_id,
-                    text=self.caption_for(movie, lang),
+                    text=self._link_caption_for(movie, lang),
                     reply_markup=movie_link_keyboard(movie.external_url, lang),
                 )
             except TelegramAPIError as retry_exc:
