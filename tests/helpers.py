@@ -51,6 +51,31 @@ def make_callback(
     ).as_(bot)
 
 
+class FakeSession:
+    """AsyncSession o'rniga — minimal fake.
+
+    `commit`/`rollback` hisoblagichlari (masalan MovieService.deliver()
+    Telegram chaqiruvidan OLDIN commit qilishini tekshirish uchun) va
+    `add()` (audit yozuvlari shu orqali qo'shiladi)."""
+
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+        self.added: list[object] = []
+
+    def add(self, obj: object) -> None:
+        self.added.append(obj)
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+    async def flush(self) -> None:
+        pass
+
+
 class FakeZSetRedis:
     """redis.asyncio.Redis o'rniga — ZADD/ZRANGEBYSCORE/ZREMRANGEBYSCORE/DELETE/EXPIRE
     komandalarini xotirada simulyatsiya qiladi (chat_cleanup_service testlari uchun)."""

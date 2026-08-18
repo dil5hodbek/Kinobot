@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.keyboards.inline import delete_confirm_keyboard, delete_results_keyboard
 from app.models.movie import Movie
+from app.services.audit_service import audit
 from app.services.movie_service import MovieService
 from app.states.admin_states import DeleteMovie
 from app.utils.filters import ButtonText, IsAdmin
@@ -111,6 +112,14 @@ async def confirm_delete(
 
     code = movie.code
     await service.delete_movie(movie.id)
+    await audit(
+        session,
+        admin_id=callback.from_user.id,
+        action="delete_movie",
+        entity_type="movie",
+        entity_id=movie_id,
+        metadata=code,
+    )
     if callback.message is not None:
         await _safe_edit(callback.message, t("delete_done", lang, code=code))
 

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.keyboards.inline import trend_admin_list_keyboard, trend_pick_keyboard
+from app.services.audit_service import audit
 from app.services.movie_service import AddTrendResult, MovieService
 from app.states.admin_states import TrendMovies
 from app.utils.filters import ButtonText, IsAdmin
@@ -37,10 +38,23 @@ async def _show_list(message: Message, lang: str, service: MovieService) -> None
 
 
 async def _add_and_report(
-    message: Message, lang: str, service: MovieService, movie_id: int
+    message: Message,
+    lang: str,
+    service: MovieService,
+    movie_id: int,
+    *,
+    session: AsyncSession,
+    admin_id: int,
 ) -> None:
     result = await service.add_to_trending(movie_id)
     if result is AddTrendResult.ADDED:
+        await audit(
+            session,
+            admin_id=admin_id,
+            action="trend_add",
+            entity_type="movie",
+            entity_id=movie_id,
+        )
         await message.answer(t("trend_add_done", lang))
     elif result is AddTrendResult.ALREADY_TRENDING:
         await message.answer(t("trend_add_already", lang))
@@ -71,7 +85,11 @@ async def got_trend_query(message: Message, lang: str, session: AsyncSession) ->
     lookup = await service.resolve_admin_query(query)
 
     if lookup.movie is not None:
-        await _add_and_report(message, lang, service, lookup.movie.id)
+        if message.from_user is not None:
+            await _add_and_report(
+                message, lang, service, lookup.movie.id,
+                session=session, admin_id=message.from_user.id,
+            )
         return
     if not lookup.candidates:
         await message.answer(t("trend_add_not_found", lang))
@@ -91,7 +109,10 @@ async def pick_trend_movie(
     except (ValueError, IndexError):
         return
     if callback.message is not None:
-        await _add_and_report(callback.message, lang, MovieService(session), movie_id)
+        await _add_and_report(
+            callback.message, lang, MovieService(session), movie_id,
+            session=session, admin_id=callback.from_user.id,
+        )
 
 
 @router.callback_query(F.data.startswith("trendrm:"))
@@ -106,6 +127,13 @@ async def remove_trend_movie(
 
     service = MovieService(session)
     await service.remove_from_trending(movie_id)
+    await audit(
+        session,
+        admin_id=callback.from_user.id,
+        action="trend_remove",
+        entity_type="movie",
+        entity_id=movie_id,
+    )
     if callback.message is not None:
         await callback.message.answer(t("trend_removed", lang))
         await _show_list(callback.message, lang, service)

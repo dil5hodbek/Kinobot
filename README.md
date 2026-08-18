@@ -13,11 +13,14 @@ bot yopiq kanaldan videoni `copy_message` orqali yuboradi.
 - ⏳ Redis asosidagi rate-limit va obuna keshi
 - 📢 Har bir yuborilgan kino ostida botga/kanalga reklama tugmalari (organik o'sish uchun)
 - 🧹 Foydalanuvchi o'z so'nggi 48 soatlik yozishmasini bitta tugma bilan tozalashi mumkin
+- 📈 100K+ auditoriya uchun: durable (DB-backed) broadcast, admin audit log,
+  Prometheus metrikalar, health-check endpointlar, webhook rejimi (bo'lim
+  pastda — "Katta auditoriya (100K+) uchun")
 
 ## Texnologiyalar
 
 Python 3.12 · aiogram 3.x · SQLAlchemy 2.x (async) · Alembic · PostgreSQL 16 (`pg_trgm`) ·
-Redis · Docker Compose · pydantic-settings
+Redis · Docker Compose · pydantic-settings · Prometheus (ixtiyoriy: Sentry)
 
 ## Struktura
 
@@ -196,6 +199,44 @@ python -m app.main
 - Yangi migratsiya: `alembic revision -m "xabar"`
 - Qo'llash: `alembic upgrade head`
 - Orqaga: `alembic downgrade -1`
+
+## Katta auditoriya (100K+) uchun
+
+### Health-check va metrikalar
+
+Bot doim (polling ham, webhook ham) `HTTP_PORT` (standart `8080`) da HTTP server ko'taradi:
+
+| Endpoint | Vazifasi |
+|---|---|
+| `GET /health/live` | Jarayon tirikmi (har doim 200) — liveness probe |
+| `GET /health/ready` | PostgreSQL + Redis bilan bog'lanish bor-yo'qligi (503 bo'lsa — muammo bor) — readiness probe / Docker healthcheck |
+| `GET /metrics` | Prometheus formatida (`telegram_updates_total`, `telegram_update_errors_total`, `telegram_update_duration_seconds` va h.k.) |
+
+`docker-compose.yml`da bu port faqat `127.0.0.1`ga ochiladi (tashqi internetga emas) — monitoring shu serverning o'zidan (yoki SSH tunnel orqali) o'qiladi.
+
+### Webhook rejimi (bir nechta bot instansi uchun)
+
+Standart — `BOT_MODE=polling` (bitta instans, hech qanday qo'shimcha sozlash shart emas). Ko'p instans/yuqori yuk kerak bo'lsa:
+
+```env
+BOT_MODE=webhook
+WEBHOOK_URL=https://sizning-domeningiz.uz
+WEBHOOK_SECRET=tasodifiy-uzun-satr
+```
+
+Reverse proxy (nginx/Caddy) HTTPS'ni botning `HTTP_PORT`iga yo'naltirishi kerak. `WEBHOOK_SECRET` Telegram'dan kelayotgan so'rovlarni soxta so'rovlardan ajratadi (`X-Telegram-Bot-Api-Secret-Token`).
+
+### Durable broadcast
+
+Reklama yuborish endi **DB-backed job** (`broadcast_jobs` jadvali) — jarayon xotirasida emas. Bot restart bo'lsa ham broadcast **yo'qolmaydi**, kursordan (`last_processed_user_id`) davom etadi. Admin xabar tasdiqlagandan keyin **⛔ To'xtatish** tugmasi bilan istalgan payt bekor qilishi mumkin. Bir nechta bot instansida ham xavfsiz (`FOR UPDATE SKIP LOCKED` — ikki instans bir jobni bir vaqtda olmaydi).
+
+### Admin audit log
+
+Har bir admin amali (kino qo'shish/tahrirlash/o'chirish, trendga qo'shish/olib tashlash, kanal qo'shish/o'chirish, broadcast boshlash/to'xtatish) `admin_audit_logs` jadvaliga yoziladi: kim, nima, qachon. Hozircha faqat DB'da — ko'rish uchun SQL bilan so'rov qilinadi (`SELECT * FROM admin_audit_logs ORDER BY created_at DESC LIMIT 50;`).
+
+### PgBouncer (tavsiya, 100K+ / bir nechta instans uchun)
+
+Ilova to'g'ridan-to'g'ri PostgreSQL'ga ham, PgBouncer orqali ham ulanadi — farqi yo'q, faqat `POSTGRES_HOST`/`POSTGRES_PORT` PgBouncer'ga ko'rsatiladi. Sig'im hisobi: `(DB_POOL_SIZE + DB_MAX_OVERFLOW) × instanslar soni < PostgreSQL max_connections` (yoki PgBouncer `pool_size`).
 
 ## Ma'lum cheklovlar
 

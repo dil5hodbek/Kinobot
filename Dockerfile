@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System deps (libpq for asyncpg is not required, but keep minimal build tools)
+# curl — Docker healthcheck uchun (/health/ready endpointini so'raydi)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
@@ -22,6 +22,14 @@ COPY . .
 RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin appuser \
     && chown -R appuser:appuser /app
 USER appuser
+
+# Health/metrics (va webhook rejimida webhook) porti
+EXPOSE 8080
+
+# Jarayon tirik bo'lsa-yu, PostgreSQL/Redis uzilgan bo'lsa — konteyner
+# "unhealthy" deb belgilanadi (orkestrator qayta ishga tushirishi mumkin).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://localhost:8080/health/ready || exit 1
 
 # Alembic migratsiyalarni ishga tushirib, so'ng botni start qiladi
 CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]

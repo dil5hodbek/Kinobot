@@ -170,8 +170,23 @@ class MovieRepository:
             )
         )
 
+    _CODE_GEN_LOCK_KEY = 872_634_103
+
     async def next_auto_code(self) -> str:
-        """Faqat raqamli kodlar orasidan keyingi bo'sh raqamni topadi (bitta so'rov)."""
+        """Faqat raqamli kodlar orasidan keyingi bo'sh raqamni topadi.
+
+        MAX+1 read-modify-write — o'z-o'zidan race'ga moyil (ikki parallel
+        "auto" so'rovi bir xil raqam olishi mumkin edi; unique constraint
+        oxirida ushlar edi, lekin admin UX'da tushunarsiz xato ko'rinardi).
+        pg_advisory_xact_lock bilan tranzaksiya davomida serializatsiya
+        qilinadi. Oddiy sequence ishlatmadik: adminlar qo'lda ixtiyoriy
+        raqamli kod kiritishi mumkin (masalan 500), sequence undan orqada
+        qolib doim to'qnashuv berardi.
+        """
+        await self._session.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"),
+            {"key": self._CODE_GEN_LOCK_KEY},
+        )
         result = await self._session.execute(
             text(
                 "SELECT COALESCE(MAX(code::bigint), 0) + 1 FROM movies "

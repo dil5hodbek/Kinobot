@@ -51,6 +51,25 @@ class MovieDeliveryError(Exception):
     """Video yuborib bo'lmadi (o'chirilgan yoki huquq yo'q)."""
 
 
+# Manba (kanaldagi post) HAQIQATAN o'lganini bildiruvchi Telegram xato
+# matnlari. FAQAT shularda kino faolsizlantiriladi — boshqa har qanday xato
+# (foydalanuvchi botni bloklagan, vaqtinchalik tarmoq muammosi, va h.k.)
+# yetkazish muammosi bo'lib, kinoning o'ziga daxli yo'q.
+_SOURCE_DEAD_MARKERS = (
+    "message to copy not found",
+    "message to forward not found",
+    "message_id_invalid",
+    "message can't be copied",
+    "bot was kicked from the channel",
+    "bot is not a member of the channel",
+)
+
+
+def _is_source_dead(exc: TelegramAPIError) -> bool:
+    msg = str(exc).lower()
+    return any(marker in msg for marker in _SOURCE_DEAD_MARKERS)
+
+
 class MovieService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -163,13 +182,26 @@ class MovieService:
         """Kinoni yuboradi (manba turiga qarab), ko'rishni hisoblaydi.
 
         Xato bo'lsa MovieDeliveryError ko'taradi.
+
+        TRANZAKSIYA CHEGARASI: Telegram chaqiruvi sekundlab cho'zilishi
+        mumkin — shu davomda update boshidan ochiq kelgan DB tranzaksiya
+        "idle in transaction" bo'lib connection'ni band qilib turmasligi
+        uchun AVVAL commit qilamiz. Telegram va PostgreSQL ikki mustaqil
+        tizim — ular hech qachon bitta atomik tranzaksiya emas: video
+        yuborilib DB yozuvi o'xshamasa ko'rish hisoblanmaydi (statistika
+        biroz kam ko'rsatishi mumkin — hujjatlashtirilgan afzal qilingan
+        tomon: foydalanuvchiga hech qachon "yuborilmagan"ni yuborilgan deb
+        hisoblamaymiz).
         """
+        await self._session.commit()
+
         if movie.source_type == "link":
             await self._deliver_link(bot, movie, chat_id, lang)
         else:
             await self._deliver_channel(bot, movie, chat_id, lang)
 
-        # Ko'rish muvaffaqiyatli — statistika
+        # Ko'rish muvaffaqiyatli — statistika (yangi qisqa tranzaksiya,
+        # middleware oxirida commit qilinadi)
         await self._repo.increment_views(movie.id)
         await self._repo.add_view(user_db_id, movie.id)
 
@@ -212,8 +244,13 @@ class MovieService:
             logger.warning(
                 "Kino yuborib bo'lmadi (movie_id=%s): %s", movie.id, exc
             )
-            await self._repo.deactivate(movie.id)
-            await self._notify_admins_dead_link(bot, movie, exc)
+            # Faolsizlantirish FAQAT manba haqiqatan o'lganda. Masalan
+            # "bot was blocked by the user" (Forbidden) — foydalanuvchi
+            # muammosi, kino emas; avval bu holatda ham kino noto'g'ri
+            # o'chirilib ketardi.
+            if _is_source_dead(exc):
+                await self._repo.deactivate(movie.id)
+                await self._notify_admins_dead_link(bot, movie, exc)
             raise MovieDeliveryError(str(exc)) from exc
 
     async def _deliver_link(

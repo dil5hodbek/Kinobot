@@ -17,7 +17,7 @@ from aiogram.methods import CopyMessage
 
 from app.models.movie import Movie
 from app.services.movie_service import MovieDeliveryError, MovieService
-from tests.helpers import make_bot
+from tests.helpers import FakeSession, make_bot
 
 
 class _FakeMovieRepo:
@@ -55,7 +55,7 @@ def _movie(movie_id: int = 7) -> Movie:
 def _service_with_fake_repo() -> tuple[MovieService, _FakeMovieRepo]:
     # session=None — deliver() sessiyani to'g'ridan-to'g'ri ishlatmaydi,
     # faqat self._repo orqali (uni fake bilan almashtiramiz).
-    service = MovieService(session=None)  # type: ignore[arg-type]
+    service = MovieService(session=FakeSession())  # type: ignore[arg-type]
     fake_repo = _FakeMovieRepo()
     service._repo = fake_repo  # type: ignore[attr-defined]
     return service, fake_repo

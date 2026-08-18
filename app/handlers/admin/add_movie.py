@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.keyboards.inline import add_movie_confirm_keyboard, skip_keyboard
 from app.keyboards.reply import admin_menu_keyboard
+from app.services.audit_service import audit
 from app.services.movie_service import MovieService
 from app.states.admin_states import AddMovie
 from app.utils.filters import ButtonText, IsAdmin
@@ -201,6 +202,14 @@ async def save_movie(
             )
         return
 
+    await audit(
+        session,
+        admin_id=callback.from_user.id,
+        action="add_movie",
+        entity_type="movie",
+        entity_id=movie.id,
+        metadata=movie.code,
+    )
     await state.clear()
     if callback.message is not None:
         await callback.message.answer(

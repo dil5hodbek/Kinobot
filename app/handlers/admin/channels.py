@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.keyboards.reply import admin_menu_keyboard
+from app.services.audit_service import audit
 from app.services.channel_service import AddChannelResult, ChannelService
 from app.states.admin_states import AddChannel
 from app.utils.filters import ButtonText, IsAdmin
@@ -67,6 +68,14 @@ async def got_channel(
         )
         return
 
+    if message.from_user is not None:
+        await audit(
+            session,
+            admin_id=message.from_user.id,
+            action="channel_add",
+            entity_type="channel",
+            entity_id=username,
+        )
     await state.clear()
     await message.answer(
         t("channel_add_saved", lang, username=username),
@@ -85,5 +94,12 @@ async def remove_channel(
         return
 
     await ChannelService(session).remove_channel(channel_id)
+    await audit(
+        session,
+        admin_id=callback.from_user.id,
+        action="channel_remove",
+        entity_type="channel",
+        entity_id=channel_id,
+    )
     if callback.message is not None:
         await callback.message.answer(t("channel_removed", lang))

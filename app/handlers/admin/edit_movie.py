@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.keyboards.inline import edit_movie_keyboard
 from app.keyboards.reply import admin_menu_keyboard
+from app.services.audit_service import audit
 from app.services.movie_service import MovieService
 from app.states.admin_states import EditMovie
 from app.utils.filters import ButtonText, IsAdmin
@@ -118,5 +119,14 @@ async def got_new_value(
 
     service = MovieService(session)
     await service.update_fields(movie_id, **{column: value})
+    if message.from_user is not None:
+        await audit(
+            session,
+            admin_id=message.from_user.id,
+            action="edit_movie",
+            entity_type="movie",
+            entity_id=movie_id,
+            metadata=f"{column}={value}",
+        )
     await state.clear()
     await message.answer(t("edit_saved", lang), reply_markup=admin_menu_keyboard(lang))

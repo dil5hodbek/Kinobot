@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.keyboards.inline import add_link_movie_confirm_keyboard, skip_keyboard
 from app.keyboards.reply import admin_menu_keyboard
+from app.services.audit_service import audit
 from app.services.movie_service import MovieService
 from app.states.admin_states import AddLinkMovie
 from app.utils.filters import ButtonText, IsAdmin
@@ -182,6 +183,14 @@ async def save_link_movie(
             genre=data.get("genre"),
         )
         await session.flush()
+        await audit(
+            session,
+            admin_id=callback.from_user.id,
+            action="add_link_movie",
+            entity_type="movie",
+            entity_id=movie.id,
+            metadata=movie.code,
+        )
     except (IntegrityError, KeyError):
         await session.rollback()
         await state.clear()

@@ -65,11 +65,38 @@ class UserRepository:
         )
 
     async def get_active_telegram_ids(self) -> list[int]:
-        """Broadcast uchun bloklanmagan foydalanuvchilar telegram_id lari."""
+        """Broadcast uchun bloklanmagan foydalanuvchilar telegram_id lari.
+
+        DIQQAT: butun ro'yxatni RAMga yuklaydi — faqat SON hisoblash yoki
+        kichik auditoriya uchun. Broadcast yuborish uchun keyset variantini
+        ishlating: `get_active_recipients_batch()`.
+        """
         result = await self._session.execute(
             select(User.telegram_id).where(User.is_blocked.is_(False))
         )
         return [row[0] for row in result.all()]
+
+    async def count_active_recipients(self) -> int:
+        """Bloklanmagan foydalanuvchilar soni (broadcast tasdiqlash uchun)."""
+        result = await self._session.execute(
+            select(func.count()).select_from(User).where(User.is_blocked.is_(False))
+        )
+        return int(result.scalar_one())
+
+    async def get_active_recipients_batch(
+        self, after_user_id: int, limit: int
+    ) -> list[tuple[int, int]]:
+        """Keyset pagination: (user.id, telegram_id) juftliklari, id o'sish
+        tartibida. Butun auditoriyani RAMga yuklamasdan batch-batch o'qish
+        uchun (0005 migratsiyadagi partial indeks bilan ishlaydi).
+        """
+        result = await self._session.execute(
+            select(User.id, User.telegram_id)
+            .where(User.is_blocked.is_(False), User.id > after_user_id)
+            .order_by(User.id)
+            .limit(limit)
+        )
+        return [(row[0], row[1]) for row in result.all()]
 
     async def count_total(self) -> int:
         result = await self._session.execute(select(func.count()).select_from(User))

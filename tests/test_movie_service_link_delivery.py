@@ -12,7 +12,7 @@ from aiogram.methods import SendMessage
 
 from app.models.movie import Movie
 from app.services.movie_service import MovieDeliveryError, MovieService
-from tests.helpers import make_bot
+from tests.helpers import FakeSession, make_bot
 
 
 class _FakeMovieRepo:
@@ -48,7 +48,7 @@ def _link_movie(movie_id: int = 9) -> Movie:
 
 
 def _service_with_fake_repo() -> tuple[MovieService, _FakeMovieRepo]:
-    service = MovieService(session=None)  # type: ignore[arg-type]
+    service = MovieService(session=FakeSession())  # type: ignore[arg-type]
     repo = _FakeMovieRepo()
     service._repo = repo  # type: ignore[attr-defined]
     return service, repo

@@ -70,6 +70,24 @@ class Settings(BaseSettings):
     promo_bot_username: str = Field("SpoylerBot", alias="PROMO_BOT_USERNAME")
     promo_channel_username: str = Field("spoylerkino", alias="PROMO_CHANNEL_USERNAME")
 
+    # === ISHGA TUSHIRISH REJIMI ===
+    # "production"da Redis MAJBURIY (MemoryStorage fallback taqiqlanadi —
+    # restart FSM holatini yo'qotadi, bir nechta instans esa umuman buziladi).
+    bot_env: str = Field("production", alias="BOT_ENV")
+    # "polling" (standart) yoki "webhook". Webhook uchun WEBHOOK_URL shart.
+    bot_mode: str = Field("polling", alias="BOT_MODE")
+    webhook_url: str = Field("", alias="WEBHOOK_URL")
+    webhook_secret: str = Field("", alias="WEBHOOK_SECRET")
+    # Health/metrics/webhook HTTP serveri porti (konteyner ichida).
+    http_port: int = Field(8080, alias="HTTP_PORT")
+
+    # === POOL (qo'shimcha) ===
+    # Pool band bo'lsa connection kutish chegarasi — cheksiz osilib qolmaslik.
+    db_pool_timeout_sec: int = Field(10, alias="DB_POOL_TIMEOUT_SEC")
+
+    # === MONITORING ===
+    sentry_dsn: str = Field("", alias="SENTRY_DSN")
+
     @cached_property
     def admin_ids(self) -> list[int]:
         return [

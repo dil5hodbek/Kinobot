@@ -1,14 +1,42 @@
+# === VCS / CI ===
 .git
-.env
+.github
 .gitignore
+
+# === Agent / dev worktree artefaktlari ===
+# .claude ichida loyihaning YANA BIR NUSXASI (worktrees) bo'lishi mumkin —
+# image'ga tushsa hajmni ikki baravar oshiradi va tasodifan .env/secret
+# olib kirishi mumkin.
+.claude
+.cursor
+.idea
+.vscode
+*.code-workspace
+
+# === Secrets ===
+.env
+.env.*
+*.pem
+*.key
+
+# === Python cache ===
 __pycache__
+**/__pycache__
 *.pyc
+*.pyo
 .pytest_cache
 .mypy_cache
 .ruff_cache
 venv
 .venv
+*.egg-info
+
+# === Testlar va hujjatlar (runtime uchun kerak emas) ===
 tests
 requirements-dev.txt
-README.md
-bot.md
+*.md
+docs
+
+# === Boshqa ===
+.DS_Store
+launcher

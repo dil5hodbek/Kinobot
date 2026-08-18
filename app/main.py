@@ -1,4 +1,16 @@
-"""Bot kirish nuqtasi: dispatcher, middleware'lar, polling."""
+"""Bot kirish nuqtasi: dispatcher, middleware'lar, HTTP server, polling/webhook.
+
+Ishga tushirish rejimlari (.env orqali):
+  BOT_MODE=polling  (standart) — bitta instans uchun, dev va kichik yuk.
+  BOT_MODE=webhook             — bir nechta instans + reverse proxy uchun.
+
+Har ikkala rejimda ham /health/live, /health/ready va /metrics HTTP
+endpointlari ishlaydi (app/observability/http_server.py).
+
+BOT_ENV=production bo'lsa Redis MAJBURIY: MemoryStorage'ga jimgina o'tish
+taqiqlanadi, chunki u (a) restartda FSM holatini yo'qotadi va (b) bir
+nechta instansda holatni butunlay buzadi.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -9,18 +21,22 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.base import BaseStorage
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from redis.asyncio import Redis
 
 from app.config import settings
-from app.database import session_factory
+from app.database import engine, session_factory
 from app.handlers import build_router
 from app.middlewares.admin_menu_interrupt import AdminMenuInterruptMiddleware
 from app.middlewares.db_session import DbSessionMiddleware
 from app.middlewares.message_log import MessageLogMiddleware
 from app.middlewares.message_log_session import MessageLogSessionMiddleware
+from app.middlewares.metrics import MetricsMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.subscription import SubscriptionMiddleware
 from app.middlewares.user_context import UserContextMiddleware
+from app.observability.http_server import build_app, start_http_server
+from app.services.broadcast_service import shutdown_jobs, start_broadcast_worker
 from app.utils.i18n import load_translations
 
 logging.basicConfig(
@@ -29,22 +45,52 @@ logging.basicConfig(
 )
 logger = logging.getLogger("kinobot")
 
+_WEBHOOK_PATH = "/webhook"
+
+
+def _init_sentry() -> None:
+    """Sentry ixtiyoriy — DSN berilmagan bo'lsa jimgina o'tkazib yuboriladi."""
+    if not settings.sentry_dsn:
+        return
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.0)
+        logger.info("Sentry yoqildi.")
+    except ImportError:
+        logger.warning("SENTRY_DSN berilgan, lekin sentry-sdk o'rnatilmagan.")
+
 
 async def _make_storage(redis: Redis) -> BaseStorage:
-    """Redis mavjud bo'lsa RedisStorage, aks holda MemoryStorage (zaxira)."""
+    """Redis mavjud bo'lsa RedisStorage.
+
+    Productionda Redis ishlamasa — FAIL FAST (ishga tushmaydi). Jimgina
+    MemoryStorage'ga o'tish ko'p instansli deploymentda FSM holatini
+    buzadi va restartda yo'qotadi, ya'ni "ishlayotgandek" ko'rinib, aslida
+    sinib turgan bot beradi.
+    """
     try:
         await redis.ping()
         logger.info("FSM uchun RedisStorage ishlatilmoqda.")
         return RedisStorage(redis)
-    except Exception as exc:  # noqa: BLE001 - Redis ishlamasa ham ishga tushamiz
+    except Exception as exc:  # noqa: BLE001
+        if settings.bot_env == "production":
+            raise RuntimeError(
+                "Redis mavjud emas — production rejimida ishga tushirib "
+                "bo'lmaydi (FSM/rate-limit/kesh Redis'ga bog'liq). "
+                f"Xato: {exc}"
+            ) from exc
         logger.warning(
-            "Redis mavjud emas (%s) — FSM uchun MemoryStorage ishlatiladi.", exc
+            "Redis mavjud emas (%s) — DEV rejimida MemoryStorage ishlatiladi.", exc
         )
         return MemoryStorage()
 
 
 def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
-    # DB sessiya — butun update'ni o'raydi (eng tashqi).
+    # Metrikalar — eng tashqi qatlam (butun pipeline o'lchovga kiradi).
+    dp.update.outer_middleware(MetricsMiddleware())
+
+    # DB sessiya — butun update'ni o'raydi.
     dp.update.outer_middleware(DbSessionMiddleware(session_factory))
 
     # Message va callback uchun kontekst zanjiri (ro'yxat tartibida ishlaydi).
@@ -67,8 +113,57 @@ def _register_middlewares(dp: Dispatcher, redis: Redis) -> None:
     dp.message.outer_middleware(MessageLogMiddleware(redis))
 
 
+def _log_startup_info(username: str, bot_id: int) -> None:
+    logger.info("Bot ishga tushdi: @%s (id=%s)", username, bot_id)
+    logger.info(
+        "MODE=%s ENV=%s | STORAGE_CHANNEL_ID=%s | REQUIRED_CHANNELS=%s | ADMIN_IDS=%s",
+        settings.bot_mode,
+        settings.bot_env,
+        settings.storage_channel_id,
+        settings.required_channels,
+        settings.admin_ids,
+    )
+    if settings.storage_channel_id == -1001234567890:
+        logger.warning(
+            "DIQQAT: STORAGE_CHANNEL_ID hali SOXTA (-1001234567890). "
+            "Kanaldan avto qo'shish ISHLAMAYDI. Real kanal ID'sini .env ga yozing."
+        )
+
+
+async def _run_polling(bot: Bot, dp: Dispatcher) -> None:
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+
+async def _run_webhook(bot: Bot, dp: Dispatcher, http_app) -> None:  # noqa: ANN001
+    """Webhook: aiogram handlerini mavjud aiohttp ilovasiga ulaydi.
+
+    Telegram'ning secret_token'i tekshiriladi — endpointga tashqaridan
+    soxta so'rov yuborib bo'lmaydi.
+    """
+    if not settings.webhook_url:
+        raise RuntimeError("BOT_MODE=webhook, lekin WEBHOOK_URL berilmagan.")
+
+    SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+        secret_token=settings.webhook_secret or None,
+    ).register(http_app, path=_WEBHOOK_PATH)
+    setup_application(http_app, dp, bot=bot)
+
+    await bot.set_webhook(
+        url=f"{settings.webhook_url.rstrip('/')}{_WEBHOOK_PATH}",
+        secret_token=settings.webhook_secret or None,
+        drop_pending_updates=True,
+    )
+    logger.info("Webhook o'rnatildi: %s%s", settings.webhook_url, _WEBHOOK_PATH)
+    # HTTP server allaqachon ishlayapti — shu yerda cheksiz kutamiz.
+    await asyncio.Event().wait()
+
+
 async def main() -> None:
     load_translations()
+    _init_sentry()
 
     redis = Redis.from_url(
         settings.redis_url,
@@ -90,27 +185,23 @@ async def main() -> None:
     _register_middlewares(dp, redis)
     dp.include_router(build_router())
 
+    http_app = build_app(engine, redis)
+    runner = await start_http_server(http_app, settings.http_port)
+
+    # Durable broadcast worker — DB'dagi joblarni oladi (restart-safe).
+    start_broadcast_worker(bot, session_factory)
+
     try:
         me = await bot.get_me()
-        logger.info("Bot ishga tushdi: @%s (id=%s)", me.username, me.id)
-        logger.info(
-            "STORAGE_CHANNEL_ID=%s | REQUIRED_CHANNELS=%s | ADMIN_IDS=%s",
-            settings.storage_channel_id,
-            settings.required_channels,
-            settings.admin_ids,
-        )
-        if settings.storage_channel_id == -1001234567890:
-            logger.warning(
-                "DIQQAT: STORAGE_CHANNEL_ID hali SOXTA (-1001234567890). "
-                "Kanaldan avto qo'shish ISHLAMAYDI. Real kanal ID'sini .env ga yozing."
-            )
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
-    finally:
-        # Fondagi vazifalarni (masalan broadcast) to'xtatamiz
-        from app.services.broadcast_service import shutdown_jobs
+        _log_startup_info(me.username or "?", me.id)
 
+        if settings.bot_mode == "webhook":
+            await _run_webhook(bot, dp, http_app)
+        else:
+            await _run_polling(bot, dp)
+    finally:
         await shutdown_jobs()
+        await runner.cleanup()
         await bot.session.close()
         await redis.aclose()
 

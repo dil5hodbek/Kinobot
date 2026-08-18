@@ -103,7 +103,7 @@
   "broadcast_ask": "📣 Yubormoqchi bo'lgan xabaringizni yuboring (matn/rasm/video):",
   "broadcast_confirm": "📣 {count} ta foydalanuvchiga yuborilsinmi?",
   "btn_broadcast_send": "✅ Yuborish",
-  "broadcast_started": "📣 Yuborish boshlandi...",
+  "broadcast_started": "📣 Yuborish boshlandi (fon rejimida, bot restart bo'lsa ham davom etadi)...",
   "broadcast_done": "✅ Yakunlandi.\n\nYuborildi: {sent}\nBloklagan: {blocked}\nXato: {failed}",
   "channel_add_ask": "➕ Yangi kanal qo'shish uchun @username yuboring (bot o'sha kanalda ADMIN bo'lishi shart).\n\nHozircha kerak bo'lmasa — pastdagi boshqa tugmani bosishingiz mumkin.",
   "channel_add_not_admin": "⚠️ Bot bu kanalda admin emas yoki kanal topilmadi. Tekshirib qayta kiriting:",
@@ -136,5 +136,8 @@
   "trend_add_full": "⚠️ Trend to'liq ({limit}/{limit}). Avval birortasini o'chiring.",
   "trend_add_done": "✅ Trendga qo'shildi.",
   "trend_removed": "✅ Trenddan olib tashlandi.",
-  "trend_pick": "Bir nechta natija topildi. Trendga qo'shish uchun birini tanlang:"
+  "trend_pick": "Bir nechta natija topildi. Trendga qo'shish uchun birini tanlang:",
+  "btn_broadcast_cancel_job": "⛔ To'xtatish",
+  "broadcast_job_cancelled": "⛔ Broadcast to'xtatildi.",
+  "broadcast_cancel_too_late": "ℹ️ Broadcast allaqachon yakunlangan."
 }

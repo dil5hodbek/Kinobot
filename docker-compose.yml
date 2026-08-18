@@ -4,11 +4,15 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
+    # Faqat serverning o'zidan ko'rinadi (127.0.0.1) — health/metrics
+    # tashqi internetga ochilmasin, faqat lokal monitoring/probe uchun.
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -29,6 +33,10 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
 
 volumes:
   pg_data:

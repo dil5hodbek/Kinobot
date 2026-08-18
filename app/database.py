@@ -23,6 +23,7 @@ engine: AsyncEngine = create_async_engine(
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,
     pool_recycle=settings.db_pool_recycle_sec,
+    pool_timeout=settings.db_pool_timeout_sec,
 )
 
 session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(

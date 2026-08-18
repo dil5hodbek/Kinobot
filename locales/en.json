@@ -103,7 +103,7 @@
   "broadcast_ask": "📣 Send the message to broadcast (text/photo/video):",
   "broadcast_confirm": "📣 Send to {count} users?",
   "btn_broadcast_send": "✅ Send",
-  "broadcast_started": "📣 Broadcast started...",
+  "broadcast_started": "📣 Broadcast started (in the background; survives bot restarts)...",
   "broadcast_done": "✅ Done.\n\nSent: {sent}\nBlocked: {blocked}\nFailed: {failed}",
   "channel_add_ask": "➕ To add a new channel, send its @username (the bot must be an ADMIN there).\n\nIf you don't need this right now, you can just tap another button below.",
   "channel_add_not_admin": "⚠️ The bot is not an admin there or the channel wasn't found. Check and re-enter:",
@@ -136,5 +136,8 @@
   "trend_add_full": "⚠️ Trending is full ({limit}/{limit}). Remove one first.",
   "trend_add_done": "✅ Added to trending.",
   "trend_removed": "✅ Removed from trending.",
-  "trend_pick": "Multiple results found. Pick a movie to add to trending:"
+  "trend_pick": "Multiple results found. Pick a movie to add to trending:",
+  "btn_broadcast_cancel_job": "⛔ Stop",
+  "broadcast_job_cancelled": "⛔ Broadcast stopped.",
+  "broadcast_cancel_too_late": "ℹ️ Broadcast already finished."
 }

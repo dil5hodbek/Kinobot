@@ -14,7 +14,7 @@ from app.handlers.admin.trend_movies import (
     remove_trend_movie,
 )
 from app.services.movie_service import AddTrendResult, AdminMovieLookup
-from tests.helpers import make_bot, make_callback, make_message
+from tests.helpers import FakeSession, make_bot, make_callback, make_message
 
 
 class _FakeMovie:
@@ -78,7 +78,7 @@ async def test_add_by_exact_code() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await got_trend_query(message, lang="uz", session=None)
+        await got_trend_query(message, lang="uz", session=FakeSession())
 
     fake_service.resolve_admin_query.assert_awaited_once_with("777")
     fake_service.add_to_trending.assert_awaited_once_with(5)
@@ -98,7 +98,7 @@ async def test_add_query_not_found() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await got_trend_query(message, lang="uz", session=None)
+        await got_trend_query(message, lang="uz", session=FakeSession())
 
     fake_service.add_to_trending.assert_not_called()
     texts = _all_texts(bot)
@@ -122,7 +122,7 @@ async def test_add_query_multiple_results_shows_picker() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await got_trend_query(message, lang="uz", session=None)
+        await got_trend_query(message, lang="uz", session=FakeSession())
 
     fake_service.add_to_trending.assert_not_called()
     method = bot.session.call_args.args[1]
@@ -146,7 +146,7 @@ async def test_add_already_trending_message() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await got_trend_query(message, lang="uz", session=None)
+        await got_trend_query(message, lang="uz", session=FakeSession())
 
     texts = _all_texts(bot)
     assert any("allaqachon" in t for t in texts)
@@ -168,7 +168,7 @@ async def test_add_limit_reached_message() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await got_trend_query(message, lang="uz", session=None)
+        await got_trend_query(message, lang="uz", session=FakeSession())
 
     texts = _all_texts(bot)
     assert any("to'liq" in t for t in texts)
@@ -187,7 +187,7 @@ async def test_pick_trend_movie_callback_adds() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await pick_trend_movie(callback, lang="uz", session=None)
+        await pick_trend_movie(callback, lang="uz", session=FakeSession())
 
     fake_service.add_to_trending.assert_awaited_once_with(7)
 
@@ -204,7 +204,7 @@ async def test_remove_trend_movie_callback() -> None:
     with patch(
         "app.handlers.admin.trend_movies.MovieService", return_value=fake_service
     ):
-        await remove_trend_movie(callback, lang="uz", session=None)
+        await remove_trend_movie(callback, lang="uz", session=FakeSession())
 
     fake_service.remove_from_trending.assert_awaited_once_with(7)
     texts = _all_texts(bot)
