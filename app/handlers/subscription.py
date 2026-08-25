@@ -22,7 +22,9 @@ async def check_subscription(
     redis: Redis,
 ) -> None:
     service = SubscriptionService(session, redis)
-    unsubscribed = await service.get_unsubscribed(callback.bot, callback.from_user.id)
+    unsubscribed = await service.get_unsubscribed(
+        callback.bot, callback.from_user.id, force=True
+    )
 
     if unsubscribed:
         await callback.answer(t("subscribe_fail", lang), show_alert=True)

@@ -67,18 +67,26 @@ class SubscriptionService:
             )
         return list(channels.values())
 
-    async def _is_subscribed(self, bot: Bot, username: str, user_id: int) -> bool:
-        """Kesh → (kesh yo'q bo'lsa) cheklangan retry bilan Telegram API →
-        (API ishlamasa) oxirgi MA'LUM javob (stale kesh) → degraded rejim.
+    async def _is_subscribed(
+        self, bot: Bot, username: str, user_id: int, *, force: bool = False
+    ) -> bool:
+        """Kesh -> (kesh yo'q yoki force=True bo'lsa) cheklangan retry bilan
+        Telegram API -> (API ishlamasa) oxirgi MA'LUM javob (stale kesh) ->
+        degraded rejim.
+
+        `force=True` — foydalanuvchi "Tekshirish" tugmasini bosganda
+        ishlatiladi: u aynan HOZIR obuna bo'lganini tasdiqlamoqchi, shuning
+        uchun 60 soniyalik "yo'q" keshi uni noto'g'ri bloklab qo'ymasligi
+        kerak — kanalga hozirgina qo'shilgan bo'lishi mumkin.
 
         Avvalgi xatti-harakat ("har qanday API xatosi = obuna bor") Telegram
         API uzilishida majburiy obunani butunlay chetlab o'tishga yo'l
         qo'yardi. Endi:
-          • timeout + 1 marta qayta urinish (backoff bilan);
-          • baribir ishlamasa — shu foydalanuvchi/kanal uchun oxirgi 24
+          - timeout + 1 marta qayta urinish (backoff bilan);
+          - baribir ishlamasa — shu foydalanuvchi/kanal uchun oxirgi 24
             soatdagi MA'LUM javob ishlatiladi (obuna holati keskin tez
             o'zgarmaydi);
-          • u ham bo'lmasa — hujjatlashtirilgan degraded rejim: foydalanuvchi
+          - u ham bo'lmasa — hujjatlashtirilgan degraded rejim: foydalanuvchi
             BLOKLANMAYDI (kino botida Telegram uzilishi paytida hammani
             qulflab qo'yish yomonroq savdo), lekin WARNING log yoziladi.
         Kanal-konfiguratsiya xatolari (kanal topilmadi/bot admin emas) —
@@ -86,9 +94,10 @@ class SubscriptionService:
         keshlaymiz (API qayta-qayta urilmasin).
         """
         cache_key = f"sub:{username}:{user_id}"
-        cached = await self._safe_cache_get(cache_key)
-        if cached is not None:
-            return cached == "1"
+        if not force:
+            cached = await self._safe_cache_get(cache_key)
+            if cached is not None:
+                return cached == "1"
 
         stale_key = f"sub:stale:{username}:{user_id}"
         for attempt in (1, 2):
@@ -131,17 +140,25 @@ class SubscriptionService:
         )
         return True
 
-    async def get_unsubscribed(self, bot: Bot, user_id: int) -> list[ChannelInfo]:
+    async def get_unsubscribed(
+        self, bot: Bot, user_id: int, *, force: bool = False
+    ) -> list[ChannelInfo]:
         """Foydalanuvchi obuna bo'lmagan kanallar ro'yxati.
 
         Har bir kanal tekshiruvi PARALLEL ishlaydi (kesh sovub qolganda har
         biri alohida Telegram API chaqiruvi bo'lishi mumkin — ketma-ket
         bo'lsa, kanallar soniga chiziqli proporsional kutish vaqti bo'lardi,
         bu esa har bir oddiy xabar uchun ishlaydigan obuna filtrida sezilarli).
+
+        `force=True` — "Tekshirish" tugmasi uchun, keshni chetlab o'tib
+        har doim yangi javob oladi (pastga qarang: _is_subscribed).
         """
         channels = await self._all_channels()
         subscribed_flags = await asyncio.gather(
-            *(self._is_subscribed(bot, ch.username, user_id) for ch in channels)
+            *(
+                self._is_subscribed(bot, ch.username, user_id, force=force)
+                for ch in channels
+            )
         )
         return [ch for ch, subscribed in zip(channels, subscribed_flags) if not subscribed]
 
